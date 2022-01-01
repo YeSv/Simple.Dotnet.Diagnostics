@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.C
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.Host", "src\Simple.Dotnet.Diagnostics.Host\Simple.Dotnet.Diagnostics.Host.csproj", "{42BEB489-21D7-46EF-B2AE-39AD94DF5306}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.Streams", "src\Simple.Dotnet.Diagnostics.Reporting\Simple.Dotnet.Diagnostics.Streams.csproj", "{ACC747B5-B637-4C64-BACA-E9EF8266C30B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.Streams", "src\Simple.Dotnet.Diagnostics.Streams\Simple.Dotnet.Diagnostics.Streams.csproj", "{ACC747B5-B637-4C64-BACA-E9EF8266C30B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
