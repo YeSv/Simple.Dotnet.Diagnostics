@@ -10,7 +10,9 @@ public static class Trace
 {
     public static ValueTask<Result<Unit, DiagnosticsError>> Handle(ref TraceQuery query, CancellationToken token)
     {
-        if (query.ProcessId is < 0) return Result.Error<Unit, DiagnosticsError>(new("Query contains not valid process id")).AsValueTask();
+        if (query.ProcessId is < 0) 
+            return Result.Error<Unit, DiagnosticsError>(new("Query contains not valid process id")).AsValueTask();
+
         if (!query.ProcessId.HasValue && string.IsNullOrWhiteSpace(query.ProcessName)) 
             return Result.Error<Unit, DiagnosticsError>(new("Process name or process id should be specified")).AsValueTask();
 

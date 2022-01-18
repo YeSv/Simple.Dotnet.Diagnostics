@@ -67,7 +67,7 @@ public static class Processes
             var publishedProcesses = DiagnosticsClient.GetPublishedProcesses();
             if (publishedProcesses == null) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
-            var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) is true ? count : publishedProcesses.Count();
+            var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) ? count : publishedProcesses.Count();
             if (totalPublishedProcesses == 0) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
             using var rent = new Rent<ProcessInfo>(totalPublishedProcesses);
@@ -100,7 +100,7 @@ public static class Processes
             var publishedProcesses = DiagnosticsClient.GetPublishedProcesses();
             if (publishedProcesses == null) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
-            var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) is true ? count : publishedProcesses.Count();
+            var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) ? count : publishedProcesses.Count();
             if (totalPublishedProcesses == 0) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
             using var rent = new Rent<ProcessInfo>(totalPublishedProcesses);

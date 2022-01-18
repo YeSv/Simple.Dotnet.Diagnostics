@@ -4,7 +4,7 @@ using Simple.Dotnet.Utilities.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-namespace Simple.Dotnet.Diagnostics.Host.HttpResults;
+namespace Simple.Dotnet.Diagnostics.Host.AspNetCore;
 
 public static class JsonResult
 {

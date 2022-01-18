@@ -1,4 +1,4 @@
-﻿using Simple.Dotnet.Diagnostics.Streams;
+﻿using Simple.Dotnet.Diagnostics.Streams.Actors;
 
 namespace Simple.Dotnet.Diagnostics.Host;
 

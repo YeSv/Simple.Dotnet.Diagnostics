@@ -20,7 +20,8 @@ public static class Paths
     {
         try
         {
-            if (string.IsNullOrEmpty(command.FileName)) return Result.Error<string, DiagnosticsError>(new($"{nameof(GenerateFullPathCommand.FileName)} can't be empty"));
+            if (string.IsNullOrEmpty(command.FileName)) 
+                return Result.Error<string, DiagnosticsError>(new($"{nameof(GenerateFullPathCommand.FileName)} can't be empty"));
 
             var fileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
                 ? $"{command.FileName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{command.Extension}"
@@ -38,7 +39,9 @@ public static class Paths
     {
         try
         {
-            if (string.IsNullOrEmpty(query.Directory)) return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForDirectoryNameQuery.Directory)} can't be empty"));
+            if (string.IsNullOrEmpty(query.Directory)) 
+                return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForDirectoryNameQuery.Directory)} can't be empty"));
+
             return Result.Ok<string, DiagnosticsError>(Path.GetFullPath(Path.Combine(CurrentDir, query.Directory)));
         }
         catch (Exception ex)
@@ -51,7 +54,8 @@ public static class Paths
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(query.FileName)) return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForFileNameQuery.FileName)} can't be empty"));
+            if (string.IsNullOrWhiteSpace(query.FileName)) 
+                return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForFileNameQuery.FileName)} can't be empty"));
 
             var fileRelativePath = string.IsNullOrWhiteSpace(query.Directory) ? query.FileName : Path.Combine(query.Directory, query.FileName);
             return Result.Ok<string, DiagnosticsError>(Path.GetFullPath(Path.Combine(CurrentDir, fileRelativePath)));

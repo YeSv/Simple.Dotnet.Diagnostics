@@ -27,9 +27,12 @@ public static class Dump
         try
         {
             var fullPathResult = Paths.Handle(new GetLocalPathForFileNameQuery(query.Output, DumpsDir), token);
-            if (!fullPathResult.IsOk) return Result.Error<FileStream, DiagnosticsError>(fullPathResult.Error);
+            if (!fullPathResult.IsOk) 
+                return Result.Error<FileStream, DiagnosticsError>(fullPathResult.Error);
 
-            if (!File.Exists(fullPathResult.Ok)) return Result.Error<FileStream, DiagnosticsError>(new DiagnosticsError("File does not exist"));
+            if (!File.Exists(fullPathResult.Ok)) 
+                return Result.Error<FileStream, DiagnosticsError>(new DiagnosticsError("File does not exist"));
+
             return Result.Ok<FileStream, DiagnosticsError>(new FileStream(fullPathResult.Ok, FileMode.Open, FileAccess.Read));
         }
         catch (Exception ex)
@@ -43,9 +46,11 @@ public static class Dump
         try
         {
             var fullPathResult = Paths.Handle(new GetLocalPathForFileNameQuery(command.Output, DumpsDir), token);
-            if (!fullPathResult.IsOk) return Result.Error<Unit, DiagnosticsError>(fullPathResult.Error);
+            if (!fullPathResult.IsOk) 
+                return Result.Error<Unit, DiagnosticsError>(fullPathResult.Error);
 
-            if (!File.Exists(fullPathResult.Ok)) return Result.Error<Unit, DiagnosticsError>(new DiagnosticsError("File does not exist"));
+            if (!File.Exists(fullPathResult.Ok)) 
+                return Result.Error<Unit, DiagnosticsError>(new DiagnosticsError("File does not exist"));
                 
             File.Delete(fullPathResult.Ok);
 
@@ -60,13 +65,17 @@ public static class Dump
 
     public static ValueTask<Result<string, DiagnosticsError>> Handle(WriteDumpCommand command, CancellationToken token)
     {
-        if (command.ProcessId is < 0) return Result.Error<string, DiagnosticsError>(new DiagnosticsError("Query contains not valid process id")).AsValueTask();
-        if (!command.ProcessId.HasValue && string.IsNullOrWhiteSpace(command.Name)) return Result.Error<string, DiagnosticsError>(new DiagnosticsError("Process name or process id should be specified")).AsValueTask();
+        if (command.ProcessId is < 0) 
+            return Result.Error<string, DiagnosticsError>(new DiagnosticsError("Query contains not valid process id")).AsValueTask();
+
+        if (!command.ProcessId.HasValue && string.IsNullOrWhiteSpace(command.Name)) 
+            return Result.Error<string, DiagnosticsError>(new DiagnosticsError("Process name or process id should be specified")).AsValueTask();
 
         if (!string.IsNullOrWhiteSpace(command.Name))
         {
             var result = Processes.Handle(new GetProcessByNameQuery(command.Name), token);
             if (!result.IsOk) return Result.Error<string, DiagnosticsError>(result.Error).AsValueTask();
+
             command = command with { ProcessId = result.Ok.ProcessId };
         }
 
@@ -81,7 +90,7 @@ public static class Dump
             if (!fullPathResult.IsOk) return fullPathResult.AsValueTask();
 
             var client = new DiagnosticsClient(command.ProcessId!.Value);
-            return new ValueTask<Result<string, DiagnosticsError>>(Task.Run(() =>
+            return new(Task.Run(() =>
             {
                 try
                 {

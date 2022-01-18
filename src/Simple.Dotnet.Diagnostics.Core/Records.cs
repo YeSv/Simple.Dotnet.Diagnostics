@@ -9,5 +9,3 @@ public readonly record struct DiagnosticsError(string? Validation, Exception? Ex
 
     public override string ToString() => Validation ?? Exception!.ToString();
 }
-
-

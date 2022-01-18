@@ -1,7 +1,7 @@
 ﻿using Simple.Dotnet.Diagnostics.Core.Handlers;
-using Simple.Dotnet.Diagnostics.Host.HttpResults;
+using Simple.Dotnet.Diagnostics.Host.AspNetCore;
 
-namespace Simple.Dotnet.Diagnostics.Host.Handlers.Http;
+namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 
 public sealed class HttpDump
 {
@@ -38,6 +38,7 @@ public sealed class HttpDump
             { Exception: not null } => new(ErrorCodes.HttpReadDumpFailed, e.Exception!.Message),
             { Validation: not null } => new(ErrorCodes.HttpDumpValidationError, e.Validation!),
         });
+
         return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
     }
 
@@ -73,6 +74,7 @@ public sealed class HttpDump
             { Exception: not null } => new(ErrorCodes.HttpGetDumpsFailed, e.Exception!.Message),
             { Validation: not null } => new(ErrorCodes.HttpDumpValidationError, e.Validation!),
         });
+
         return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
     }
 }

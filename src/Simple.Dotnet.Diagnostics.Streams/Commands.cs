@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.ObjectPool;
-using Simple.Dotnet.Diagnostics.Core.Domains.EventPipes;
+using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 
 namespace Simple.Dotnet.Diagnostics.Streams;
 
