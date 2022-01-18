@@ -1,10 +1,11 @@
-﻿using Simple.Dotnet.Diagnostics.Core.Handlers;
-using Simple.Dotnet.Diagnostics.Host.HttpResults;
+﻿using Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
+using Simple.Dotnet.Diagnostics.Host.AspNetCore;
 using Simple.Dotnet.Diagnostics.Streams;
+using Simple.Dotnet.Diagnostics.Streams.Actors;
 using Simple.Dotnet.Diagnostics.Streams.Streams;
 using System.Net.WebSockets;
 
-namespace Simple.Dotnet.Diagnostics.Host.Handlers.WS;
+namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 
 public sealed class WsCounters
 {
@@ -16,22 +17,22 @@ public sealed class WsCounters
         RootActor actor,
         CancellationToken token)
     {
-        // Receive counters subscription
-        var countersResult = Counters.Handle(ref query, token);
-        if (!countersResult.IsOk) return JsonResult.Create(countersResult.Error, 400); // TODO: rewrite
+        // Create a cancellation for event pipe in case if stream fails
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
 
         // Accept WS connection and subscribe to it
         using var ws = await context.WebSockets.AcceptWebSocketAsync();
         var stream = new WebSocketStream(ws, context.RequestServices.GetJsonOptions());
 
-        // Create actor
+        // Create an actor
         var actorId = await actor.AddStream(stream);
 
-        // Add handlers for metrics
-        countersResult.Ok!.OnMetric = m => actor.Send(SendEventCommand.Create(m), actorId);
-
-        // Get tasks for subscription and counters
-        using var countersSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+        // TODO: Rewrite
+        /*
+        // Receive counters subscription
+        var countersResult = Counters.Handle(ref query, m => actor.Send(SendEventCommand.Create(m), actorId), cancellation.Token);
+        if (!countersResult.IsOk) return JsonResult.Create(countersResult.Error, 400); // TODO: rewrite
+        
 
         // Wait for either closure or error in http stream or counters error
         var (streamTask, countersTask) = (stream.Completion, countersResult.Ok.Start(countersSource.Token));
@@ -53,7 +54,7 @@ public sealed class WsCounters
 
         if (countersTask.Result != null)
             logger.LogError(countersTask.Result, "{HandlerType} for {ActorId} finished with Counters error", nameof(WsCounters), actorId);
-
+        */
         // TODO: Map errors or not needed?
         return Results.Ok();
     }

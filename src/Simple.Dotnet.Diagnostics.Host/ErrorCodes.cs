@@ -1,4 +1,4 @@
-﻿namespace Simple.Dotnet.Diagnostics.Host.Handlers;
+﻿namespace Simple.Dotnet.Diagnostics.Host;
 
 public static class ErrorCodes
 {

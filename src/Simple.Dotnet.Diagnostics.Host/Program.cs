@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host;
-using Simple.Dotnet.Diagnostics.Host.Handlers.Http;
-using Simple.Dotnet.Diagnostics.Host.Handlers.WS;
-using Simple.Dotnet.Diagnostics.Streams;
+using Simple.Dotnet.Diagnostics.Host.Handlers;
+using Simple.Dotnet.Diagnostics.Streams.Actors;
 
 // Pre-create required directories
 Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Dump.DumpsDir), default).Ok!);

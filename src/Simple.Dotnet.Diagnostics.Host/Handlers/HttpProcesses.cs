@@ -1,7 +1,7 @@
 ﻿using Simple.Dotnet.Diagnostics.Core.Handlers;
-using Simple.Dotnet.Diagnostics.Host.HttpResults;
+using Simple.Dotnet.Diagnostics.Host.AspNetCore;
 
-namespace Simple.Dotnet.Diagnostics.Host.Handlers.Http;
+namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 
 public sealed class HttpProcesses
 {
