@@ -3,13 +3,13 @@ using Simple.Dotnet.Diagnostics.Host.AspNetCore;
 using Simple.Dotnet.Diagnostics.Streams;
 using Simple.Dotnet.Diagnostics.Streams.Actors;
 using Simple.Dotnet.Diagnostics.Streams.Streams;
+using Simple.Dotnet.Utilities.Results;
 using System.Net.WebSockets;
 
 namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 
 public sealed class WsCounters
 {
-    // Non-retryable counters subscription based on WebSocket
     public static async Task<IResult> Handle(
         CountersQuery query, 
         HttpContext context, 
@@ -17,46 +17,62 @@ public sealed class WsCounters
         RootActor actor,
         CancellationToken token)
     {
-        // Create a cancellation for event pipe in case if stream fails
-        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
-
-        // Accept WS connection and subscribe to it
-        using var ws = await context.WebSockets.AcceptWebSocketAsync();
-        var stream = new WebSocketStream(ws, context.RequestServices.GetJsonOptions());
-
-        // Create an actor
-        var actorId = await actor.AddStream(stream);
-
-        // TODO: Rewrite
-        /*
         // Receive counters subscription
-        var countersResult = Counters.Handle(ref query, m => actor.Send(SendEventCommand.Create(m), actorId), cancellation.Token);
-        if (!countersResult.IsOk) return JsonResult.Create(countersResult.Error, 400); // TODO: rewrite
-        
-
-        // Wait for either closure or error in http stream or counters error
-        var (streamTask, countersTask) = (stream.Completion, countersResult.Ok.Start(countersSource.Token));
-        var finishedTask = await Task.WhenAny(streamTask, countersTask);
-
-        countersSource.Cancel(); // Stopping counters subscription task (if it has not already finished)
-        await actor.RemoveStream(actorId, false); // Wait for a stream removal
-
-        var closureTask = (finishedTask == streamTask) switch
+        var countersResult = Counters.Handle(ref query, token);
+        if (!countersResult.IsOk)
         {
-            true => CloseOnWsError(ws, logger, actorId, streamTask.Result, token),
-            false => CloseWsOnCountersError(ws, logger, actorId, countersTask.Result, token)
-        };
+            logger.LogError(countersResult.Error.Exception,
+                "Failed to create counters event pipe for a process: {ProcessId}/{ProcessName}. Message: {ErrorMessage}",
+                query.ProcessId, query.ProcessName, countersResult.Error);
 
-        await Task.WhenAll(closureTask, streamTask, countersTask);
+            var response = ResponseMapper.ToResponse(countersResult, e => e switch
+            {
+                { Exception: not null } => new(ErrorCodes.WebSocketCountersFailed, e.Exception!.Message),
+                { Validation: not null } => new(ErrorCodes.WebSocketCountersValidationError, e.Validation!)
+            });
+            return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
+        }
 
-        if (streamTask.Result.Exception != null)
-            logger.LogError(streamTask.Result.Exception, "{HandlerType} for {ActorId} finished with HttpStream error", nameof(WsCounters), actorId);
+        // Create a cancellation for event pipe in case if stream fails
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
 
-        if (countersTask.Result != null)
-            logger.LogError(countersTask.Result, "{HandlerType} for {ActorId} finished with Counters error", nameof(WsCounters), actorId);
-        */
-        // TODO: Map errors or not needed?
-        return Results.Ok();
+        try
+        {
+            // Accept WS connection and subscribe to it
+            using var ws = await context.WebSockets.AcceptWebSocketAsync();
+            var stream = new WebSocketStream(ws, context.RequestServices.GetJsonOptions());
+
+            // Create actor
+            var actorId = await actor.AddStream(stream);
+
+            // Wait for either closure or error in http stream or counters error
+            var (streamTask, countersTask) = (stream.Completion, countersResult.Ok!.Start(m => actor.Send(SendEventCommand.Create(m), actorId), token));
+            var finishedTask = await Task.WhenAny(streamTask, countersTask);
+
+            cancellation.Cancel(); // Stopping counters subscription task (if it has not already finished)
+            await actor.RemoveStream(actorId, false); // Wait for a stream removal
+
+            // Close web socket with correct reason
+            await ((finishedTask == streamTask) switch
+            {
+                true => CloseOnWsError(ws, logger, actorId, streamTask.Result, token),
+                false => CloseOnCountersError(ws, logger, actorId, countersTask.Result, token)
+            });
+
+            if (streamTask.Result is { Exception: not null })
+                logger.LogError(streamTask.Result.Exception, "{HandlerType} for {ActorId} finished with HttpStream error", nameof(WsCounters), actorId);
+
+            if (countersTask.Result is { IsOk: false, Error: var countersException })
+                logger.LogError(countersException, "{HandlerType} for {ActorId} finished with Counters error", nameof(WsCounters), actorId);
+
+
+            return Results.Ok();
+        }
+        finally
+        {
+            cancellation.Cancel();
+            cancellation.Dispose();
+        }
     }
 
     static Task CloseOnWsError(WebSocket ws, ILogger logger, Guid actorId, WebSocketResult wsResult, CancellationToken token) =>
@@ -75,12 +91,12 @@ public sealed class WsCounters
                 logger.LogError(t.Exception, "Failed to close connection to a web socket in {CountersHandler}. ActorId: {ActorId}", nameof(WsCounters), actorId);
         });
 
-    static Task CloseWsOnCountersError(WebSocket ws, ILogger logger, Guid actorId, Exception? countersError, CancellationToken token) =>
-        ws.CloseAsync(countersError switch
+    static Task CloseOnCountersError(WebSocket ws, ILogger logger, Guid actorId, UniResult<Unit, Exception> subscriptionResult, CancellationToken token) =>
+        ws.CloseAsync(subscriptionResult switch
         {
-            null => WebSocketCloseStatus.NormalClosure,
-            var e => WebSocketCloseStatus.InternalServerError
-        }, $"Closing WebSocket due to internal countes closure. Error: {countersError}. SubscriptionId: {actorId}", token).ContinueWith(t =>
+            { IsOk: false } => WebSocketCloseStatus.InternalServerError,
+            _ => WebSocketCloseStatus.NormalClosure
+        }, $"Closing WebSocket due to internal countes closure. Error: {(subscriptionResult.IsOk ? "<Normal closure>" : "<Unhandled error>")}. SubscriptionId: {actorId}", token).ContinueWith(t =>
         {
             if (t.IsCompletedSuccessfully) return;
             if (t.IsCanceled) return;

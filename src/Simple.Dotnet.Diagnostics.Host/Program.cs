@@ -62,5 +62,15 @@ app.MapGet("/counters/ws", (
     HttpContext context,
     CancellationToken token) => WsCounters.Handle(new(processId, providers, processName, refreshInterval), context, logger, actor, token));
 
+app.MapGet("/counters/sse", (
+    [FromQuery(Name = "pid")] int? processId,
+    [FromQuery(Name = "pname")] string? processName,
+    [FromQuery(Name = "providers")] string[]? providers,
+    [FromQuery(Name = "interval")] uint? refreshInterval,
+    [FromServices] ILogger<WsCounters> logger,
+    [FromServices] RootActor actor,
+    HttpContext context,
+    CancellationToken token) => SseCounters.Handle(new(processId, providers, processName, refreshInterval), context, logger, actor, token));
+
 // Run
 app.Run();

@@ -8,31 +8,26 @@ using System.Threading.Tasks;
 
 namespace Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 
-
 public sealed class Subscription : IDisposable
 {
+    CancellationTokenSource? _cts;
+    TaskCompletionSource<UniResult<Unit, Exception>>? _tcs;
+
     readonly EventPipeSession _session;
     readonly EventPipeEventSource _source;
-    readonly CancellationTokenSource _cts;
-    readonly Action<EventMetric> _sideEffect;
-    readonly TaskCompletionSource<UniResult<Unit, Exception>> _tcs;
 
-    public Subscription(
-        EventPipeSession session, 
-        EventPipeEventSource source,
-        Action<EventMetric> sideEffect,
-        CancellationToken token)
+    public Subscription(EventPipeSession session, EventPipeEventSource source)
     {
         _source = source;
         _session = session;
-        _sideEffect = sideEffect;
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        _tcs = new TaskCompletionSource<UniResult<Unit, Exception>>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
-    public Task<UniResult<Unit, Exception>> Start()
+    public Task<UniResult<Unit, Exception>> Start(Action<EventMetric> sideEffect, CancellationToken token)
     {
-        _cts.Token.Register(s => ((EventPipeSession)s!).Stop(), _session, false); // Stop session once cancelled
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _cts.Token.Register(s => ((EventPipeSession)s!).Stop(), _session, false); // Stop session once canceled
 
         _source.Dynamic.All += e =>
         {
@@ -42,7 +37,7 @@ public sealed class Subscription : IDisposable
             {
                 var payload = (IDictionary<string, object>)((IDictionary<string, object>)e.PayloadValue(0))["Payload"];
 
-                _sideEffect((string)payload["CounterType"] switch
+                sideEffect((string)payload["CounterType"] switch
                 {
                     "Sum" => new((string)payload["Name"], (double)payload["Increment"], EventMetricType.Counter),
                     _ => new((string)payload["Name"], (double)payload["Mean"], EventMetricType.Gauge)
@@ -60,11 +55,11 @@ public sealed class Subscription : IDisposable
             try
             {
                 subscription._source.Process();
-                subscription._tcs.TrySetResult(UniResult.Ok<Unit, Exception>(Unit.Shared));
+                subscription._tcs!.TrySetResult(UniResult.Ok<Unit, Exception>(Unit.Shared));
             }
             catch (Exception ex)
             {
-                subscription._tcs.TrySetResult(UniResult.Error<Unit, Exception>(ex));
+                subscription._tcs!.TrySetResult(UniResult.Error<Unit, Exception>(ex));
             }
         }, this, _cts.Token);
 
@@ -72,7 +67,7 @@ public sealed class Subscription : IDisposable
         return Task.WhenAll(processTask, _tcs.Task).ContinueWith((t, s) =>
         {
             using var subscription = (Subscription)s!;
-            return subscription._tcs.Task.Result;
+            return subscription._tcs!.Task.Result;
         }, this);
     }
 

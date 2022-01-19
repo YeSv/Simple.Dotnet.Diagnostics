@@ -19,6 +19,14 @@ public static class ErrorCodes
     public const int HttpGetProcessByNameFailed = 1013;
     public const int HttpGetProcessesValidationError = 1014;
 
+    // WebSocket Counters
+    public const int WebSocketCountersFailed = 1021;
+    public const int WebSocketCountersValidationError = 1022;
+
+    // ServerSentEvents Counters
+    public const int SseCountersFailed = 1031;
+    public const int SseCountersValidationError = 1032;
+
     public static int ToHttpCode(int errorCode) => errorCode switch
     {
         // Generic
@@ -36,6 +44,12 @@ public static class ErrorCodes
         HttpReadDumpFailed => InternalError,
         HttpDeleteDumpFailed => InternalError,
         HttpDumpValidationError => ValidationError,
+
+        // Counters
+        WebSocketCountersFailed => InternalError,
+        WebSocketCountersValidationError => ValidationError,
+        SseCountersFailed => InternalError,
+        SseCountersValidationError => ValidationError,
         
         // All
         _ => InternalError
