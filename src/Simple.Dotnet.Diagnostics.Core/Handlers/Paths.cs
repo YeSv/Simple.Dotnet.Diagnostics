@@ -21,7 +21,7 @@ public static class Paths
         try
         {
             if (string.IsNullOrEmpty(command.FileName)) 
-                return Result.Error<string, DiagnosticsError>(new($"{nameof(GenerateFullPathCommand.FileName)} can't be empty"));
+                return new(new DiagnosticsError($"{nameof(GenerateFullPathCommand.FileName)} can't be empty"));
 
             var fileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
                 ? $"{command.FileName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{command.Extension}"
@@ -31,7 +31,7 @@ public static class Paths
         }
         catch (Exception ex)
         {
-            return Result.Error<string, DiagnosticsError>(new(ex));
+            return new(new DiagnosticsError(ex));
         }
     }
 
@@ -40,13 +40,13 @@ public static class Paths
         try
         {
             if (string.IsNullOrEmpty(query.Directory)) 
-                return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForDirectoryNameQuery.Directory)} can't be empty"));
+                return new(new DiagnosticsError($"{nameof(GetLocalPathForDirectoryNameQuery.Directory)} can't be empty"));
 
-            return Result.Ok<string, DiagnosticsError>(Path.GetFullPath(Path.Combine(CurrentDir, query.Directory)));
+            return new(Path.GetFullPath(Path.Combine(CurrentDir, query.Directory)));
         }
         catch (Exception ex)
         {
-            return Result.Error<string, DiagnosticsError>(new(ex));
+            return new(new DiagnosticsError(ex));
         }
     }
 
@@ -55,14 +55,14 @@ public static class Paths
         try
         {
             if (string.IsNullOrWhiteSpace(query.FileName)) 
-                return Result.Error<string, DiagnosticsError>(new($"{nameof(GetLocalPathForFileNameQuery.FileName)} can't be empty"));
+                return new(new DiagnosticsError($"{nameof(GetLocalPathForFileNameQuery.FileName)} can't be empty"));
 
             var fileRelativePath = string.IsNullOrWhiteSpace(query.Directory) ? query.FileName : Path.Combine(query.Directory, query.FileName);
-            return Result.Ok<string, DiagnosticsError>(Path.GetFullPath(Path.Combine(CurrentDir, fileRelativePath)));
+            return new(Path.GetFullPath(Path.Combine(CurrentDir, fileRelativePath)));
         }
         catch (Exception ex)
         {
-            return Result.Error<string, DiagnosticsError>(new(ex));
+            return new(new DiagnosticsError(ex));
         }
     }
 }

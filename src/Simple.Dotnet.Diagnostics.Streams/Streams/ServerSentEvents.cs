@@ -35,19 +35,14 @@ public sealed class SseStream : IStream
 
     public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token) 
     {
-        try
-        {
-            return data switch
-            {
-                { Data: null } => new(UniResult.Ok<Unit, Exception>(Unit.Shared)),
-                var d => new(Send(Format(d, _options), token))
-            };
-        }
-        catch (Exception ex)
-        {
-            _tcs.TrySetResult(new(SseResultType.UnhandledException, ex));
-            return new(UniResult.Error<Unit, Exception>(ex));
-        }
+        if (data.Rent.Value == null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
+
+        var formatResult = Format(data, _options);
+        if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
+
+        // Failed to format
+        _tcs.TrySetResult(new(SseResultType.UnhandledException, formatResult.Error!));
+        return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
     public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
@@ -55,84 +50,92 @@ public sealed class SseStream : IStream
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
 
-        try
-        {
-            return new(Send(Format(batch, _options), token));
-        }
-        catch (Exception ex)
-        {
-            _tcs.TrySetResult(new(SseResultType.UnhandledException, ex));
-            return new(UniResult.Error<Unit, Exception>(ex));
-        }
+        var formatResult = Format(batch, _options);
+        if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
+
+        // Failed to format values
+        _tcs.TrySetResult(new(SseResultType.UnhandledException, formatResult.Error!));
+        return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
     async Task<UniResult<Unit, Exception>> Send(ReadOnlyMemory<byte> bytes, CancellationToken token)
     {
         try
         {
-            if (!_response!.HasStarted) await _response.StartAsync(token);
+            if (!_response.HasStarted) await _response.StartAsync(token);
             await _response.BodyWriter.WriteAsync(bytes, token);
 
-            return UniResult.Ok<Unit, Exception>(Unit.Shared);
+            return new(Unit.Shared);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _tcs.TrySetResult(new(SseResultType.ClosedByClient, ex));
+            return new(Unit.Shared);
         }
         catch (Exception ex)
         {
-            _tcs!.TrySetResult(new(SseResultType.HttpError, ex));
-            return UniResult.Error<Unit, Exception>(ex);
+            _tcs.TrySetResult(new(SseResultType.HttpError, ex));
+            return new(ex);
         }
     }
 
-    static ReadOnlyMemory<byte> Format(StreamData data, JsonSerializerOptions? options)
+    // Serializes commands
+    static Result<ReadOnlyMemory<byte>, Exception> Format(in StreamData data, JsonSerializerOptions? options)
     {
         try
         {
+            using var valueRent = data.Rent;
             using var builder = new Utf8ValueStringBuilder(true);
-            using var writerRent = BufferWriterPool<byte>.Shared.Get();
+            using var writer = BufferWriterPool<byte>.Shared.Get();
 
-            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), data.Data, options);
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), valueRent.Value, options);
 
             builder.Append($"event: {nameof(SseEventType.Single)}\n");
             builder.Append("data: ");
-            builder.Append(writerRent.Value.WrittenMemory);
+            builder.Append(writer.Value.WrittenMemory);
             builder.Append('\n');
             builder.Append('\n');
 
-            return builder.AsSpan().ToArray();
+            return new(builder.AsSpan().ToArray());
         }
-        finally
+        catch (Exception ex)
         {
-            (data.Data as IDisposable)?.Dispose();
+            return new(ex);
         }
     }
 
-    static ReadOnlyMemory<byte> Format(ReadOnlyMemory<StreamData> batch, JsonSerializerOptions? options)
+    // Serializes commands
+    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<StreamData> batch, JsonSerializerOptions? options)
     {
-        if (batch.Length == 0) return Array.Empty<byte>();
         try
         {
             using var builder = new Utf8ValueStringBuilder(true);
-            using var writerRent = BufferWriterPool<byte>.Shared.Get();
-            using var poolableRent = new Rent<object>(batch.Length);
+            using var writer = BufferWriterPool<byte>.Shared.Get();
+            using var poolables = new Rent<object>(batch.Length);
 
             var batchSpan = batch.Span;
             for (var i = 0; i < batchSpan.Length; i++)
             {
-                if (batchSpan[i].Data != null) poolableRent.Append(batchSpan[i].Data!);
+                if (batchSpan[i].Rent.Value != null) poolables.Append(batchSpan[i].Rent.Value!);
             }
 
-            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), poolableRent.WrittenMemory, options);
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), poolables.WrittenMemory, options);
 
             builder.Append($"event: {nameof(SseEventType.Batch)}\n");
             builder.Append("data: ");
-            builder.Append(writerRent.Value.WrittenMemory);
+            builder.Append(writer.Value.WrittenMemory);
             builder.Append('\n');
             builder.Append('\n');
 
-            return builder.AsSpan().ToArray();
+            return new(builder.AsSpan().ToArray());
+        }
+        catch (Exception ex)
+        {
+            return new(ex);
         }
         finally
         {
-            for (var i = 0; i < batch.Length; i++) (batch.Span[i].Data as IDisposable)?.Dispose();
+            for (var i = 0; i < batch.Length; i++) batch.Span[i].Rent.Dispose();
         }
     }
 }

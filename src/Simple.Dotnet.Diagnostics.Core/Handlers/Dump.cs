@@ -27,17 +27,15 @@ public static class Dump
         try
         {
             var fullPathResult = Paths.Handle(new GetLocalPathForFileNameQuery(query.Output, DumpsDir), token);
-            if (!fullPathResult.IsOk) 
-                return Result.Error<FileStream, DiagnosticsError>(fullPathResult.Error);
+            if (!fullPathResult.IsOk) return new(fullPathResult.Error);
 
-            if (!File.Exists(fullPathResult.Ok)) 
-                return Result.Error<FileStream, DiagnosticsError>(new DiagnosticsError("File does not exist"));
+            if (!File.Exists(fullPathResult.Ok)) return new(new DiagnosticsError("File does not exist"));
 
-            return Result.Ok<FileStream, DiagnosticsError>(new FileStream(fullPathResult.Ok, FileMode.Open, FileAccess.Read));
+            return new(new FileStream(fullPathResult.Ok, FileMode.Open, FileAccess.Read));
         }
         catch (Exception ex)
         {
-            return Result.Error<FileStream, DiagnosticsError>(new(ex));
+            return new(new DiagnosticsError(ex));
         }
     }
 
@@ -46,19 +44,17 @@ public static class Dump
         try
         {
             var fullPathResult = Paths.Handle(new GetLocalPathForFileNameQuery(command.Output, DumpsDir), token);
-            if (!fullPathResult.IsOk) 
-                return Result.Error<Unit, DiagnosticsError>(fullPathResult.Error);
+            if (!fullPathResult.IsOk) return new(fullPathResult.Error);
 
-            if (!File.Exists(fullPathResult.Ok)) 
-                return Result.Error<Unit, DiagnosticsError>(new DiagnosticsError("File does not exist"));
+            if (!File.Exists(fullPathResult.Ok)) return new(new DiagnosticsError("File does not exist"));
                 
             File.Delete(fullPathResult.Ok);
 
-            return Result.Ok<Unit, DiagnosticsError>(Unit.Shared);
+            return new(Unit.Shared);
         }
         catch (Exception ex)
         {
-            return Result.Error<Unit, DiagnosticsError>(new DiagnosticsError(ex));
+            return new(new DiagnosticsError(ex));
         }
     }
 
