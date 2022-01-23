@@ -52,11 +52,11 @@ public static class Processes
             if (processes.Ok!.Length == 0) return Result.Error<ProcessInfo, DiagnosticsError>(new($"Process with specified name '{query.ProcessName}' was not found"));
             if (processes.Ok!.Length > 0) return Result.Error<ProcessInfo, DiagnosticsError>(new($"Found multiple processes with name '{query.ProcessName}'"));
 
-            return Result.Ok<ProcessInfo, DiagnosticsError>(processes.Ok[0]);
+            return new(processes.Ok[0]);
         }
         catch (Exception ex)
         {
-            return Result.Error<ProcessInfo, DiagnosticsError>(new (ex));
+            return Result.Error<ProcessInfo, DiagnosticsError>(new(ex));
         }
     }
 
@@ -70,7 +70,7 @@ public static class Processes
             var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) ? count : publishedProcesses.Count();
             if (totalPublishedProcesses == 0) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
-            using var rent = new Rent<ProcessInfo>(totalPublishedProcesses);
+            using var processes = new Rent<ProcessInfo>(totalPublishedProcesses);
             foreach (var processId in publishedProcesses)
             {
                 token.ThrowIfCancellationRequested();
@@ -78,13 +78,13 @@ public static class Processes
                 var process = Process.GetProcessById(processId);
                 if (process?.ProcessName != query.ProcessName) continue;
 
-                rent.Append(new(processId, query.ProcessName, process.MainModule?.FileName ?? string.Empty));
+                processes.Append(new(processId, query.ProcessName, process.MainModule?.FileName ?? string.Empty));
             }
 
-            return Result.Ok<ProcessInfo[], DiagnosticsError>(rent.Written switch
+            return new(processes.Written switch
             {
                 0 => Array.Empty<ProcessInfo>(),
-                _ => rent.WrittenSpan.ToArray()
+                _ => processes.WrittenSpan.ToArray()
             });
         }
         catch (Exception ex)
@@ -103,7 +103,7 @@ public static class Processes
             var totalPublishedProcesses = publishedProcesses.TryGetNonEnumeratedCount(out var count) ? count : publishedProcesses.Count();
             if (totalPublishedProcesses == 0) return Result.Ok<ProcessInfo[], DiagnosticsError>(Array.Empty<ProcessInfo>());
 
-            using var rent = new Rent<ProcessInfo>(totalPublishedProcesses);
+            using var processes = new Rent<ProcessInfo>(totalPublishedProcesses);
             foreach (var processId in publishedProcesses)
             {
                 token.ThrowIfCancellationRequested();
@@ -111,13 +111,13 @@ public static class Processes
                 var process = Process.GetProcessById(processId);
                 if (process == null) continue;
 
-                rent.Append(new(processId, process.ProcessName, process.MainModule?.FileName ?? string.Empty));
+                processes.Append(new(processId, process.ProcessName, process.MainModule?.FileName ?? string.Empty));
             }
 
-            return Result.Ok<ProcessInfo[], DiagnosticsError>(rent.Written switch
+            return new(processes.Written switch
             {
                 0 => Array.Empty<ProcessInfo>(),
-                _ => rent.WrittenSpan.ToArray()
+                _ => processes.WrittenSpan.ToArray()
             });
         }
         catch (Exception ex)

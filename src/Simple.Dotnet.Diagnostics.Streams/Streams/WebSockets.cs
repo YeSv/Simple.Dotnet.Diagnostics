@@ -26,74 +26,100 @@ public sealed class WebSocketStream : IStream
         _reader = Reader(ws, _cts, _tcs);
     }
 
-    public Task<WebSocketResult> Completion => Task.WhenAll(_reader, _tcs.Task).ContinueWith((_, t) => ((Task<WebSocketResult>)t!).Result, _tcs.Task);
+    public Task<WebSocketResult> Completion => _tcs.Task.ContinueWith((t, s) =>
+    {
+        var stream = (WebSocketStream)s!;
+
+        stream._cts.Cancel(); // Stop the thread
+        stream._reader.Wait(); // Wait for the stop
+
+        return t.Result;
+    }, this);
 
     public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token)
     {
-        if (_ws is null || data.Data is null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
-        try
-        {
-            using var writerRent = BufferWriterPool<byte>.Shared.Get();
+        if (data.Rent.Value is null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
 
-            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), data.Data, _jsonOptions);
-            return new(Send(writerRent.Value.WrittenSpan.ToArray(), token));
-        }
-        catch (Exception ex)
-        {
-            _tcs?.TrySetResult(new(WebSocketResultType.UnhandledException, null, ex)); // Resolve completion as error
-            return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
-        }
-        finally
-        {
-            (data.Data as IDisposable)?.Dispose();
-        }
+        var formatResult = Format(data, _jsonOptions);
+        if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
+
+        // Failed to format
+        _tcs.TrySetResult(new(WebSocketResultType.UnhandledException, null, formatResult.Error)); // Resolve completion as error
+        return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
     public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
     {
-        if (_ws is null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
 
-        try
-        {
-            using var writerRent = BufferWriterPool<byte>.Shared.Get();
-            using var poolableRent = new Rent<object>(batch.Length);
+        var formatResult = Format(batch, _jsonOptions);
+        if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
 
-            for (var i = 0; i < batch.Length; i++)
-            {
-                if (batch.Span[i].Data != null) poolableRent.Append(batch.Span[i].Data!);
-            }
-
-            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), poolableRent.WrittenMemory, _jsonOptions);
-
-            return new(Send(writerRent.Value.WrittenSpan.ToArray(), token));
-        }
-        catch (Exception ex)
-        {
-            _tcs?.TrySetResult(new(WebSocketResultType.UnhandledException, null, ex)); // Resolve completion as error
-            return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
-        }
-        finally
-        {
-            for (var i = 0; i < batch.Length; i++) (batch.Span[i].Data as IDisposable)?.Dispose();
-        }
+        // Failed to format
+        _tcs.TrySetResult(new(WebSocketResultType.UnhandledException, null, formatResult.Error)); // Resolve completion as error
+        return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
     async Task<UniResult<Unit, Exception>> Send(ReadOnlyMemory<byte> bytes, CancellationToken token)
     {
         try
         {
-            await _ws!.SendAsync(bytes, WebSocketMessageType.Binary, true, token);
+            await _ws.SendAsync(bytes, WebSocketMessageType.Binary, true, token); 
+            return new(Unit.Shared);
         }
-        catch (OperationCanceledException) {}
+        catch (OperationCanceledException ex) 
+        {
+            _tcs.TrySetResult(new(WebSocketResultType.ClosedByClient, null, ex)); 
+            return new(Unit.Shared);
+        }
         catch (WebSocketException ex)
         {
-            _tcs!.TrySetResult(new(WebSocketResultType.WsException, ex.WebSocketErrorCode, ex));
+            _tcs.TrySetResult(new(WebSocketResultType.WsException, ex.WebSocketErrorCode, ex));
+            return new(ex);
         }
+    }
 
-        // Handle all exceptions and resolve Completion task as WsException, Ok otherwise
-        return UniResult.Ok<Unit, Exception>(Unit.Shared);
+    static Result<ReadOnlyMemory<byte>, Exception> Format(in StreamData data, JsonSerializerOptions? options)
+    {
+        try
+        {
+            using var valueRent = data.Rent;
+            using var writer = BufferWriterPool<byte>.Shared.Get();
+
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), valueRent.Value, options);
+            return new(writer.Value.WrittenSpan.ToArray());
+        }
+        catch (Exception ex)
+        {
+            return new(ex);
+        }
+    }
+
+    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<StreamData> batch, JsonSerializerOptions? options)
+    {
+        try
+        {
+            using var writer = BufferWriterPool<byte>.Shared.Get();
+            using var messages = new Rent<object>(batch.Length);
+
+            for (var i = 0; i < batch.Length; i++)
+            {
+                if (batch.Span[i].Rent.Value != null) messages.Append(batch.Span[i].Rent.Value!);
+            }
+
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), messages.WrittenMemory, options);
+
+            return new(writer.Value.WrittenSpan.ToArray());
+        }
+        catch (Exception ex)
+        {
+            return new(ex);
+        }
+        finally
+        {
+            for (var i = 0; i < batch.Length; i++) batch.Span[i].Rent.Dispose();
+        }
     }
 
     static Task Reader(WebSocket ws, CancellationTokenSource cts, TaskCompletionSource<WebSocketResult> tcs) => Task.Run(async () =>
@@ -114,19 +140,16 @@ public sealed class WebSocketStream : IStream
                 }
 
                 tcs.TrySetResult(new(WebSocketResultType.ClosedByClient, default, default));
-                cts.Cancel();
             }
         }
         catch (OperationCanceledException) { }
         catch (WebSocketException ex)
         {
             tcs.TrySetResult(new(WebSocketResultType.WsException, ex.WebSocketErrorCode, ex));
-            cts.Cancel();
         }
         catch (Exception ex)
         {
             tcs.TrySetResult(new(WebSocketResultType.UnhandledException, default, ex));
-            cts.Cancel();
         }
     }, cts.Token);
 }

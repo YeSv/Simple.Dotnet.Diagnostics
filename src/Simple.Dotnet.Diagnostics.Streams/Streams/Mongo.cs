@@ -35,10 +35,11 @@ public sealed class Mongo : IStream
 
     public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token)
     {
-        var document = Format(data, DateTime.UtcNow, _config);
-        if (document == null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
+        var formatResult = Format(data, DateTime.UtcNow, _config);
+        if (!formatResult.IsOk) return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
+        if (formatResult.Ok == null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
 
-        return new(Send(document, token));
+        return new(Send(formatResult.Ok!, token));
     }
 
     public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
@@ -46,35 +47,66 @@ public sealed class Mongo : IStream
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
 
-        var documents = Format(batch, DateTime.UtcNow, _config);
-        if (documents.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
+        var formatResult = Format(batch, DateTime.UtcNow, _config);
+        if (!formatResult.IsOk) return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
 
-        return new(Send(documents, token));
+        return new(Send(formatResult.Ok!, token));
     }
 
-    static BsonDocument[] Format(ReadOnlyMemory<StreamData> batch, DateTime timestamp, MongoConfig formattingConfig)
+    Task<UniResult<Unit, Exception>> Send(BsonDocument document, CancellationToken token) =>
+        _collection.InsertOneAsync(document, null, token).ContinueWith(t => t switch
+        {
+            { IsFaulted: true, Exception: var error } => new(error!.InnerException!),
+            _ => UniResult.Ok<Unit, Exception>(Unit.Shared)
+        });
+
+    Task<UniResult<Unit, Exception>> Send(BsonDocument[] documents, CancellationToken token) =>
+        _collection.InsertManyAsync(documents, ManyOpts, token).ContinueWith(t => t switch
+        {
+            { IsFaulted: true, Exception: var error } => new(error!.InnerException!),
+            _ => UniResult.Ok<Unit, Exception>(Unit.Shared)
+        });
+
+    static UniResult<BsonDocument?, Exception> Format(in StreamData data, DateTime timestamp, MongoConfig formattingConfig)
     {
-        using var documents = new Rent<BsonDocument>(batch.Length);
-
-        for (var i = 0; i < batch.Length; i++)
+        try
         {
-            var document = Format(batch.Span[i], timestamp, formattingConfig);
-            if (document != null) documents.Append(document);
+            using var valueRent = data.Rent;
+            if (valueRent.Value is not SendEventCommand cmd) return new((BsonDocument?)null);
+
+            return new(ToDocument(cmd, timestamp, formattingConfig));
         }
-
-        return documents.Written switch
+        catch (Exception ex)
         {
-            0 => Array.Empty<BsonDocument>(),
-            _ => documents.WrittenSpan.ToArray()
-        };
+            return new(ex);
+        }
+    }
+
+    static UniResult<BsonDocument[], Exception> Format(ReadOnlyMemory<StreamData> data, DateTime timestamp, MongoConfig formattingConfig)
+    {
+        try
+        {
+            using var documents = new Rent<BsonDocument>(data.Length);
+            for (var i = 0; i < data.Length; i++)
+            {
+                if (data.Span[i].Rent.Value is SendEventCommand cmd) documents.Append(ToDocument(cmd, timestamp, formattingConfig));
+            }
+
+            return new(documents.WrittenSpan.ToArray());
+        }
+        catch (Exception ex)
+        {
+            return new(ex);
+        }
+        finally
+        {
+            for (var i = 0; i < data.Length; i++) data.Span[i].Rent.Dispose();
+        }
     }
 
     // TODO: Optimize serialization
-    static BsonDocument? Format(in StreamData data, DateTime timestamp, MongoConfig formattingConfig)
-    {
-        if (data.Data is not SendEventCommand cmd) return null;
-        
-        return new BsonDocument
+    static BsonDocument ToDocument(SendEventCommand cmd, DateTime timestamp, MongoConfig formattingConfig) =>
+        new BsonDocument
         {
             { formattingConfig.TimeStampField, timestamp },
             {
@@ -85,19 +117,4 @@ public sealed class Mongo : IStream
             },
             { formattingConfig.ValueField, cmd.Metric.Value }
         };
-    }
-
-    Task<UniResult<Unit, Exception>> Send(BsonDocument document, CancellationToken token) =>
-        _collection.InsertOneAsync(document, null, token).ContinueWith(t => t switch
-        {
-            { IsFaulted: true, Exception: var error } => UniResult.Error<Unit, Exception>(error!.InnerException!),
-            _ => UniResult.Ok<Unit, Exception>(Unit.Shared)
-        });
-
-    Task<UniResult<Unit, Exception>> Send(BsonDocument[] documents, CancellationToken token) =>
-        _collection.InsertManyAsync(documents, ManyOpts, token).ContinueWith(t => t switch
-        {
-            { IsFaulted: true, Exception: var error } => UniResult.Error<Unit, Exception>(error!.InnerException!),
-            _ => UniResult.Ok<Unit, Exception>(Unit.Shared)
-        });
 }

@@ -49,16 +49,16 @@ public sealed class Counters
 
         try
         {
-            using var rent = new Rent<EventPipeProvider>(query.Providers!.Length);
+            using var providers = new Rent<EventPipeProvider>(query.Providers!.Length);
             foreach (var providerName in query.Providers)
             {
                 if (!Registry.KnownProviders.TryGetValue(providerName, out var provider)) 
                     return Result.Error<Subscription, DiagnosticsError>(new($"Unknown provider name: '{providerName}'"));
 
-                rent.Append(new(provider.Name, provider.Level, provider.Keywords, providerArguments));
+                providers.Append(new(provider.Name, provider.Level, provider.Keywords, providerArguments));
             }
 
-            return EventPipes.EventPipes.Handle(new(query.ProcessId!.Value, rent.WrittenSpan.ToArray()), token);
+            return EventPipes.EventPipes.Handle(new(query.ProcessId!.Value, providers.WrittenSpan.ToArray()), token);
         }
         catch (Exception ex)
         {

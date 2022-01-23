@@ -1,9 +1,10 @@
-﻿using Simple.Dotnet.Utilities.Results;
+﻿using Simple.Dotnet.Utilities.Pools;
+using Simple.Dotnet.Utilities.Results;
 
 namespace Simple.Dotnet.Diagnostics.Streams;
 
 // Send data to a stream
-public readonly record struct StreamData(object? Data, Guid SubscriptionId);
+public readonly record struct StreamData(ValueRent<object?> Rent, Guid SubscriptionId);
 
 // Stream implemented per connection type
 public interface IStream

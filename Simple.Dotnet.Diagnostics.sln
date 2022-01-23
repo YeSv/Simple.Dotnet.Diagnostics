@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.H
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.Streams", "src\Simple.Dotnet.Diagnostics.Streams\Simple.Dotnet.Diagnostics.Streams.csproj", "{ACC747B5-B637-4C64-BACA-E9EF8266C30B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simple.Dotnet.Diagnostics.Actions", "src\Simple.Dotnet.Diagnostics.Actions\Simple.Dotnet.Diagnostics.Actions.csproj", "{824D5A26-3F1C-4393-93A3-BF37FEA66B73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{ACC747B5-B637-4C64-BACA-E9EF8266C30B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ACC747B5-B637-4C64-BACA-E9EF8266C30B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ACC747B5-B637-4C64-BACA-E9EF8266C30B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{824D5A26-3F1C-4393-93A3-BF37FEA66B73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{824D5A26-3F1C-4393-93A3-BF37FEA66B73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{824D5A26-3F1C-4393-93A3-BF37FEA66B73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{824D5A26-3F1C-4393-93A3-BF37FEA66B73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -37,6 +43,7 @@ Global
 		{7F552D89-4CC0-44C5-8E14-EE156F8FACC0} = {907D9A66-FCC7-4617-A17F-E7D53247C6FC}
 		{42BEB489-21D7-46EF-B2AE-39AD94DF5306} = {907D9A66-FCC7-4617-A17F-E7D53247C6FC}
 		{ACC747B5-B637-4C64-BACA-E9EF8266C30B} = {907D9A66-FCC7-4617-A17F-E7D53247C6FC}
+		{824D5A26-3F1C-4393-93A3-BF37FEA66B73} = {907D9A66-FCC7-4617-A17F-E7D53247C6FC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {72093564-EF3B-4AF1-996D-79836ED2A2C0}

@@ -22,13 +22,12 @@ public sealed record class JsonResult<T>(T? Value, int? StatusCode) : IResult
         httpContext.Response.StatusCode = StatusCode ?? 200;
         httpContext.Response.ContentType = "application/json";
 
-        using var rent = BufferWriterPool<byte>.Shared.Get();
-        using var writer = new Utf8JsonWriter(rent.Value);
-        JsonSerializer.Serialize(writer, Value, JsonResult.GetJsonOptions(httpContext.RequestServices));
+        using var writer = BufferWriterPool<byte>.Shared.Get();
+        JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), Value, JsonResult.GetJsonOptions(httpContext.RequestServices));
 
         if (!httpContext.Response.HasStarted) await httpContext.Response.StartAsync();
 
-        await httpContext.Response.BodyWriter.WriteAsync(rent.Value.WrittenMemory);
+        await httpContext.Response.BodyWriter.WriteAsync(writer.Value.WrittenMemory);
         await httpContext.Response.BodyWriter.FlushAsync();
     }
 }
