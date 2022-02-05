@@ -10,7 +10,7 @@ public sealed class HttpDump
         var result = await Dump.Handle(command, token);
         if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception, 
             "Write dump for process: {ProcessId}/{ProcessName} failed with error. Message: {ErrorMessage}.", 
             command.ProcessId, command.Name, result.Error);
@@ -28,7 +28,7 @@ public sealed class HttpDump
         var result = Dump.Handle(query, token);
         if (result.IsOk) return Results.File(result.Ok!, fileDownloadName: query.Output);
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Read dump for output {Output} failed with error. Message: {ErrorMessage}",
             query.Output, result.Error.Validation ?? result.Error.Exception!.Message);
@@ -47,7 +47,7 @@ public sealed class HttpDump
         var result = Dump.Handle(command, token);
         if (result.IsOk) return Results.Ok();
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Delete dump for output {Output} failed with error. Message: {ErrorMessage}",
             command.Output, result.Error);
@@ -65,7 +65,7 @@ public sealed class HttpDump
         var result = Dump.Handle(new GetAvailableDumpsQuery(), token);
         if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Get available dumps failed with error. Message: {ErrorMessage}", result.Error);
 

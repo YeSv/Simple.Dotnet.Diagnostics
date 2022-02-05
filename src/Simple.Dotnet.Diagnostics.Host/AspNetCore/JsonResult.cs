@@ -22,8 +22,10 @@ public sealed record class JsonResult<T>(T? Value, int? StatusCode) : IResult
         httpContext.Response.StatusCode = StatusCode ?? 200;
         httpContext.Response.ContentType = "application/json";
 
+        var jsonOptions = JsonResult.GetJsonOptions(httpContext.RequestServices);
+
         using var writer = BufferWriterPool<byte>.Shared.Get();
-        JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), Value, JsonResult.GetJsonOptions(httpContext.RequestServices));
+        JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value, new() { Indented = jsonOptions?.WriteIndented ?? false, SkipValidation = false, Encoder = jsonOptions?.Encoder }), Value, jsonOptions);
 
         if (!httpContext.Response.HasStarted) await httpContext.Response.StartAsync();
 

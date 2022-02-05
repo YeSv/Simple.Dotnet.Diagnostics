@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using Microsoft.Extensions.Configuration;
+using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 
 namespace Simple.Dotnet.Diagnostics.Streams.Streams;
 
@@ -33,16 +34,16 @@ public sealed class Mongo : IStream
         _collection = new MongoClient(config.ConnectionString).GetDatabase(config.Database).GetCollection<BsonDocument>(config.Collection);
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(EventMetric metric, CancellationToken token)
     {
-        var formatResult = Format(data, DateTime.UtcNow, _config);
+        var formatResult = Format(metric, DateTime.UtcNow, _config);
         if (!formatResult.IsOk) return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
         if (formatResult.Ok == null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
 
         return new(Send(formatResult.Ok!, token));
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<EventMetric> batch, CancellationToken token)
     {
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
@@ -67,14 +68,11 @@ public sealed class Mongo : IStream
             _ => UniResult.Ok<Unit, Exception>(Unit.Shared)
         });
 
-    static UniResult<BsonDocument?, Exception> Format(in StreamData data, DateTime timestamp, MongoConfig formattingConfig)
+    static UniResult<BsonDocument?, Exception> Format(in EventMetric metric, DateTime timestamp, MongoConfig formattingConfig)
     {
         try
         {
-            using var valueRent = data.Rent;
-            if (valueRent.Value is not SendEventCommand cmd) return new((BsonDocument?)null);
-
-            return new(ToDocument(cmd, timestamp, formattingConfig));
+            return new(ToDocument(metric, timestamp, formattingConfig));
         }
         catch (Exception ex)
         {
@@ -82,15 +80,12 @@ public sealed class Mongo : IStream
         }
     }
 
-    static UniResult<BsonDocument[], Exception> Format(ReadOnlyMemory<StreamData> data, DateTime timestamp, MongoConfig formattingConfig)
+    static UniResult<BsonDocument[], Exception> Format(ReadOnlyMemory<EventMetric> data, DateTime timestamp, MongoConfig formattingConfig)
     {
         try
         {
             using var documents = new Rent<BsonDocument>(data.Length);
-            for (var i = 0; i < data.Length; i++)
-            {
-                if (data.Span[i].Rent.Value is SendEventCommand cmd) documents.Append(ToDocument(cmd, timestamp, formattingConfig));
-            }
+            for (var i = 0; i < data.Length; i++) documents.Append(ToDocument(data.Span[i], timestamp, formattingConfig));
 
             return new(documents.WrittenSpan.ToArray());
         }
@@ -98,23 +93,19 @@ public sealed class Mongo : IStream
         {
             return new(ex);
         }
-        finally
-        {
-            for (var i = 0; i < data.Length; i++) data.Span[i].Rent.Dispose();
-        }
     }
 
     // TODO: Optimize serialization
-    static BsonDocument ToDocument(SendEventCommand cmd, DateTime timestamp, MongoConfig formattingConfig) =>
+    static BsonDocument ToDocument(in EventMetric metric, DateTime timestamp, MongoConfig formattingConfig) =>
         new BsonDocument
         {
             { formattingConfig.TimeStampField, timestamp },
             {
                 formattingConfig.MetadataField, new BsonDocument
                 {
-                    { "type", cmd.Metric.Name }
+                    { "type", metric.Name }
                 }
             },
-            { formattingConfig.ValueField, cmd.Metric.Value }
+            { formattingConfig.ValueField, metric.Value }
         };
 }
