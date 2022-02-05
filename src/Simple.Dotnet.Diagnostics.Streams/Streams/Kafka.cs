@@ -1,4 +1,5 @@
 ﻿using Confluent.Kafka;
+using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using System.Text.Json;
@@ -22,16 +23,16 @@ public sealed class Kafka : IStream, IDisposable
         _producer = new ProducerBuilder<byte[], byte[]>(config.ProducerConfig).Build();
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(EventMetric metric, CancellationToken token)
     {
-        var formatResult = Format(data);
+        var formatResult = Format(metric);
         if (!formatResult.IsOk) return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
         if (formatResult.Ok == null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
 
         return new(Send(formatResult.Ok!, _config.Topic, token));
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<EventMetric> batch, CancellationToken token)
     {
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
@@ -73,15 +74,12 @@ public sealed class Kafka : IStream, IDisposable
         }
     }
 
-    static UniResult<byte[]?, Exception> Format(in StreamData data)
+    static UniResult<byte[]?, Exception> Format(in EventMetric metric)
     {
         try
         {
-            using var valueRent = data.Rent;
-            if (valueRent.Value is not SendEventCommand cmd) return new((byte[]?)null);
-
             using var writerRent = BufferWriterPool<byte>.Shared.Get();
-            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), cmd.Metric);
+            JsonSerializer.Serialize(new Utf8JsonWriter(writerRent.Value), metric);
 
             return new(writerRent.Value.WrittenSpan.ToArray());
         }
@@ -91,18 +89,15 @@ public sealed class Kafka : IStream, IDisposable
         }
     }
 
-    static Result<ReadOnlyMemory<byte[]>, Exception> Format(ReadOnlyMemory<StreamData> batch)
+    static Result<ReadOnlyMemory<byte[]>, Exception> Format(ReadOnlyMemory<EventMetric> batch)
     {
         try
         {
             using var formatted = new Rent<byte[]>(batch.Length);
-
             for (var i = 0; i < batch.Length; i++)
             {
-                if (batch.Span[i].Rent.Value is not SendEventCommand cmd) continue;
-
                 using var writer = BufferWriterPool<byte>.Shared.Get();
-                JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), cmd.Metric);
+                JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), batch.Span[i]);
             }
 
             return new(formatted.WrittenSpan.ToArray());
@@ -110,10 +105,6 @@ public sealed class Kafka : IStream, IDisposable
         catch (Exception ex)
         {
             return new(ex);
-        }
-        finally
-        {
-            for (var i = 0; i < batch.Length; i++) batch.Span[i].Rent.Dispose();
         }
     }
 }

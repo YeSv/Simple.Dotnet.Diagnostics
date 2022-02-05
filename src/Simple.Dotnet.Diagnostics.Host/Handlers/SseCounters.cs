@@ -1,7 +1,7 @@
-﻿using Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
+﻿using Simple.Dotnet.Diagnostics.Actions;
+using Simple.Dotnet.Diagnostics.Actions.Registry;
+using Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore;
-using Simple.Dotnet.Diagnostics.Streams;
-using Simple.Dotnet.Diagnostics.Streams.Actors;
 using Simple.Dotnet.Diagnostics.Streams.Streams;
 using Simple.Dotnet.Utilities.Results;
 
@@ -12,11 +12,10 @@ public sealed class SseCounters
     public static async Task<IResult> Handle(
         CountersQuery query,
         HttpContext context,
+        ActionsRegistry registry,
         ILogger logger,
-        RootActor actor,
         CancellationToken token)
     {
-        // Receive counters subscription
         var countersResult = Counters.Handle(ref query, token);
         if (!countersResult.IsOk)
         {
@@ -32,41 +31,20 @@ public sealed class SseCounters
             return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
         }
 
-        // Create a cancellation for event pipe in case if stream fails
-        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+        var stream = new SseStream(context.Response, context.RequestServices.GetJsonOptions());
 
-        try
+        var actionName = $"sse-action-{Guid.NewGuid()}";
+        var action = ActionTypes.OneShot(actionName, logger, () => stream, () => countersResult.Ok!);
+
+        token.Register(() => registry.Cancel(actionName));
+
+        var actionResult = await registry.Schedule(actionName, action);
+        if (!actionResult.IsOk)
         {
-            // Create stream
-            var stream = new SseStream(context.Response, context.RequestServices.GetJsonOptions());
-
-            // Create actor
-            var actorId = await actor.AddStream(stream);
-
-            // Wait for either closure or error in http stream or counters error
-            var (streamTask, countersTask) = (stream.Completion, countersResult.Ok!.Start(m => actor.Send(SendEventCommand.Create(m), actorId), token));
-            var finishedTask = await Task.WhenAny(streamTask, countersTask);
-
-            cancellation.Cancel(); // Stopping counters subscription task (if it has not already finished)
-            await actor.RemoveStream(actorId, false); // Wait for a stream removal
-
-            if (streamTask.Result is { Error: not null })
-                logger.LogError(streamTask.Result.Error, "{HandlerType} for {ActorId} finished with HttpStream error", nameof(SseCounters), actorId);
-
-            if (countersTask.Result is { IsOk: false, Error: var countersException })
-                logger.LogError(countersException, "{HandlerType} for {ActorId} finished with Counters error", nameof(SseCounters), actorId);
-
-            var error = streamTask.Result.Error ?? countersTask.Result.Error;
-            if (error == null) return Results.Ok();
-
-            var response = ResponseMapper.ToResponse(UniResult.Error<Unit, Exception>(error), e => new(ErrorCodes.SseCountersFailed, e!.Message));
+            var response = ResponseMapper.ToResponse(UniResult.Error<Unit, Exception>(actionResult.Error!), e => new(ErrorCodes.SseCountersFailed, e!.Message));
             return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
         }
-        finally
-        {
-            cancellation.Cancel();
-            cancellation.Dispose();
-        }
-    }
 
+        return Results.Ok();
+    }
 }

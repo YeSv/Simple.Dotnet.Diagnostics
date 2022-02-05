@@ -9,7 +9,7 @@ using System.Threading;
 namespace Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
 
 // TODO: Add support for Provider[Counter1, Counter2], Provider, Provider.... queries
-public readonly record struct CountersQuery(int? ProcessId, string[]? Providers, string? ProcessName, uint? RefreshInterval);
+public readonly record struct CountersQuery(int? ProcessId, string? Providers, string? ProcessName, uint? RefreshInterval);
 
 public sealed class Counters
 {
@@ -35,6 +35,9 @@ public sealed class Counters
         var idLookup = Processes.Handle(new GetProcessByIdQuery(query.ProcessId!.Value), token);
         if (!idLookup.IsOk) return Result.Error<Subscription, DiagnosticsError>(idLookup.Error);
 
+        var parsedProviders = ParseProviders(query.Providers);
+        if (!parsedProviders.IsOk) return new(new DiagnosticsError("Failed to parse providers"));
+
         var providerArguments = query.RefreshInterval == null ? null : new Dictionary<string, string>
         {
             ["EventCounterIntervalSec"] = query.RefreshInterval!.Value.ToString()
@@ -50,7 +53,7 @@ public sealed class Counters
         try
         {
             using var providers = new Rent<EventPipeProvider>(query.Providers!.Length);
-            foreach (var providerName in query.Providers)
+            foreach (var providerName in parsedProviders.Ok!)
             {
                 if (!Registry.KnownProviders.TryGetValue(providerName, out var provider)) 
                     return Result.Error<Subscription, DiagnosticsError>(new($"Unknown provider name: '{providerName}'"));
@@ -64,6 +67,12 @@ public sealed class Counters
         {
             return Result.Error<Subscription, DiagnosticsError>(new(ex));
         }
+    }
+
+    static UniResult<string[], Exception> ParseProviders(string? providers)
+    {
+        if (string.IsNullOrWhiteSpace(providers)) return new(Array.Empty<string>());
+        return new(providers.Trim().Split(','));
     }
 }
 

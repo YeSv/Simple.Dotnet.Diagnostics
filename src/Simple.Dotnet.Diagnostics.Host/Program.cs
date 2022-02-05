@@ -1,8 +1,12 @@
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Simple.Dotnet.Diagnostics.Actions.Registry;
 using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host;
+using Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
 using Simple.Dotnet.Diagnostics.Host.Handlers;
-using Simple.Dotnet.Diagnostics.Streams.Actors;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 // Pre-create required directories
 Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Dump.DumpsDir), default).Ok!);
@@ -16,8 +20,21 @@ builder.Logging.ClearProviders().AddConsole();
 
 // Services
 builder.Services
+    .Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
+    {
+        o.SerializerOptions.WriteIndented = true;
+        o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+    })
     .Configure<AppConfig>(builder.Configuration.GetSection(nameof(AppConfig)))
-    .AddSingleton<RootActor>();
+    
+    // Services
+    .AddSingleton<ActionsRegistry>()
+
+    // Health
+    .AddSingleton<ActionsHealthCheck>()
+    .AddHealthChecks()
+    .AddCheck<ActionsHealthCheck>("actions", timeout: TimeSpan.FromSeconds(5));
 
 // Build app
 var app = builder.Build();
@@ -55,22 +72,41 @@ app.MapDelete("/dump", ([FromQuery] string name, [FromServices] ILogger<HttpDump
 app.MapGet("/counters/ws", (
     [FromQuery(Name = "pid")] int? processId,
     [FromQuery(Name = "pname")] string? processName,
-    [FromQuery(Name = "providers")] string[]? providers,
+    [FromQuery(Name = "providers")] string? providers,
     [FromQuery(Name = "interval")] uint? refreshInterval,
     [FromServices] ILogger<WsCounters> logger,
-    [FromServices] RootActor actor,
+    [FromServices] ActionsRegistry registry,
     HttpContext context,
-    CancellationToken token) => WsCounters.Handle(new(processId, providers, processName, refreshInterval), context, logger, actor, token));
+    CancellationToken token) => WsCounters.Handle(new(processId, providers, processName, refreshInterval), context, logger, registry, token));
 
 app.MapGet("/counters/sse", (
     [FromQuery(Name = "pid")] int? processId,
     [FromQuery(Name = "pname")] string? processName,
-    [FromQuery(Name = "providers")] string[]? providers,
+    [FromQuery(Name = "providers")] string? providers,
     [FromQuery(Name = "interval")] uint? refreshInterval,
     [FromServices] ILogger<WsCounters> logger,
-    [FromServices] RootActor actor,
+    [FromServices] ActionsRegistry registry,
     HttpContext context,
-    CancellationToken token) => SseCounters.Handle(new(processId, providers, processName, refreshInterval), context, logger, actor, token));
+    CancellationToken token) => SseCounters.Handle(new(processId, providers, processName, refreshInterval), context, registry, logger, token));
+
+// Actions
+app.MapGet("/actions", (
+    [FromServices] ILogger<HttpActions> logger,
+    [FromServices] ActionsRegistry registry,
+    CancellationToken token) => HttpActions.GetAll(new(), logger, registry, token));
+
+app.MapDelete("/actions", (
+    [FromQuery(Name = "name")] string name,
+    [FromServices] ILogger<HttpActions> logger,
+    [FromServices] ActionsRegistry registry,
+    CancellationToken token) => HttpActions.Cancel(new(name), logger, registry, token));
+
+// Health
+app.MapHealthChecks("/healthcheck", new()
+{
+    AllowCachingResponses = false,
+    ResponseWriter = HealthFormatter.WriteResponse
+});
 
 // Run
 app.Run();

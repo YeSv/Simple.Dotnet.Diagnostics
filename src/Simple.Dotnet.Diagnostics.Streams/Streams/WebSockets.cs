@@ -1,4 +1,5 @@
-﻿using Simple.Dotnet.Utilities.Buffers;
+﻿using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
+using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using System.Net.WebSockets;
 using System.Text.Json;
@@ -36,11 +37,9 @@ public sealed class WebSocketStream : IStream
         return t.Result;
     }, this);
 
-    public ValueTask<UniResult<Unit, Exception>> Send(StreamData data, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(EventMetric metric, CancellationToken token)
     {
-        if (data.Rent.Value is null) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
-
-        var formatResult = Format(data, _jsonOptions);
+        var formatResult = Format(metric, _jsonOptions);
         if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
 
         // Failed to format
@@ -48,7 +47,7 @@ public sealed class WebSocketStream : IStream
         return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<StreamData> batch, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<EventMetric> batch, CancellationToken token)
     {
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
@@ -80,14 +79,13 @@ public sealed class WebSocketStream : IStream
         }
     }
 
-    static Result<ReadOnlyMemory<byte>, Exception> Format(in StreamData data, JsonSerializerOptions? options)
+    static Result<ReadOnlyMemory<byte>, Exception> Format(in EventMetric metric, JsonSerializerOptions? options)
     {
         try
         {
-            using var valueRent = data.Rent;
             using var writer = BufferWriterPool<byte>.Shared.Get();
 
-            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), valueRent.Value, options);
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), metric, options);
             return new(writer.Value.WrittenSpan.ToArray());
         }
         catch (Exception ex)
@@ -96,29 +94,18 @@ public sealed class WebSocketStream : IStream
         }
     }
 
-    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<StreamData> batch, JsonSerializerOptions? options)
+    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<EventMetric> batch, JsonSerializerOptions? options)
     {
         try
         {
             using var writer = BufferWriterPool<byte>.Shared.Get();
-            using var messages = new Rent<object>(batch.Length);
-
-            for (var i = 0; i < batch.Length; i++)
-            {
-                if (batch.Span[i].Rent.Value != null) messages.Append(batch.Span[i].Rent.Value!);
-            }
-
-            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), messages.WrittenMemory, options);
+            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), batch, options);
 
             return new(writer.Value.WrittenSpan.ToArray());
         }
         catch (Exception ex)
         {
             return new(ex);
-        }
-        finally
-        {
-            for (var i = 0; i < batch.Length; i++) batch.Span[i].Rent.Dispose();
         }
     }
 

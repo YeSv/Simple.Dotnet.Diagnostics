@@ -27,6 +27,10 @@ public static class ErrorCodes
     public const int SseCountersFailed = 1031;
     public const int SseCountersValidationError = 1032;
 
+    // Actions
+    public const int GetActionsFailed = 1101;
+
+
     public static int ToHttpCode(int errorCode) => errorCode switch
     {
         // Generic
@@ -50,6 +54,9 @@ public static class ErrorCodes
         WebSocketCountersValidationError => ValidationError,
         SseCountersFailed => InternalError,
         SseCountersValidationError => ValidationError,
+
+        // Actions
+        GetActionsFailed => InternalError,
         
         // All
         _ => InternalError
