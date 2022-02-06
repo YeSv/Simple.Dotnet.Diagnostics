@@ -38,10 +38,21 @@ public sealed class SseCounters
 
         token.Register(() => registry.Cancel(actionName));
 
-        var actionResult = await registry.Schedule(actionName, action);
+        var registerResult = await registry.Register(actionName, action);
+        if (!registerResult.IsOk)
+        {
+            logger.LogWarning(registerResult.Error, "Failed to register a new sse action");
+
+            var response = ResponseMapper.ToResponse(UniResult.Error<Unit, Exception>(registerResult.Error!), e => new(ErrorCodes.SseCountersFailed, "Failed to register an action"));
+            return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
+        }
+
+        var actionResult = await registerResult.Ok!;
         if (!actionResult.IsOk)
         {
-            var response = ResponseMapper.ToResponse(UniResult.Error<Unit, Exception>(actionResult.Error!), e => new(ErrorCodes.SseCountersFailed, e!.Message));
+            logger.LogWarning(actionResult.Error, "An error occurred while executing an action. Action: {Action}", actionName);
+
+            var response = ResponseMapper.ToResponse(UniResult.Error<Unit, Exception>(actionResult.Error!), e => new(ErrorCodes.SseCountersFailed, "An error occurred while executing an action"));
             return JsonResult.Create(response, ErrorCodes.ToHttpCode(response.Error!.Value.Code));
         }
 

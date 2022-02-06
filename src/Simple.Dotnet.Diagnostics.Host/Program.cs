@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Simple.Dotnet.Diagnostics.Actions.Registry;
 using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
 using Simple.Dotnet.Diagnostics.Host.Handlers;
+using Simple.Dotnet.Diagnostics.Streams.Streams;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -84,10 +84,28 @@ app.MapGet("/counters/sse", (
     [FromQuery(Name = "pname")] string? processName,
     [FromQuery(Name = "providers")] string? providers,
     [FromQuery(Name = "interval")] uint? refreshInterval,
-    [FromServices] ILogger<WsCounters> logger,
+    [FromServices] ILogger<SseCounters> logger,
     [FromServices] ActionsRegistry registry,
     HttpContext context,
     CancellationToken token) => SseCounters.Handle(new(processId, providers, processName, refreshInterval), context, registry, logger, token));
+
+app.MapPost("/counters/kafka", (
+    [FromQuery(Name = "pid")] int? processId,
+    [FromQuery(Name = "pname")] string? processName,
+    [FromQuery(Name = "providers")] string? providers,
+    [FromQuery(Name = "interval")] uint? refreshInterval,
+    [FromBody] KafkaConfig config,
+    [FromServices] ILogger<KafkaCounters> logger,
+    [FromServices] ActionsRegistry registry) => KafkaCounters.Handle(new(processId, providers, processName, refreshInterval), config, registry, logger));
+
+app.MapPost("/counters/mongo", (
+    [FromQuery(Name = "pid")] int? processId,
+    [FromQuery(Name = "pname")] string? processName,
+    [FromQuery(Name = "providers")] string? providers,
+    [FromQuery(Name = "interval")] uint? refreshInterval,
+    [FromBody] MongoConfig config,
+    [FromServices] ILogger<MongoCounters> logger,
+    [FromServices] ActionsRegistry registry) => MongoCounters.Handle(new(processId, providers, processName, refreshInterval), config, registry, logger));
 
 // Actions
 app.MapGet("/actions", (

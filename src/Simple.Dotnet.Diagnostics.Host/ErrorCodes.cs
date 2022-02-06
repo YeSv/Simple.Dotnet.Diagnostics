@@ -27,6 +27,12 @@ public static class ErrorCodes
     public const int SseCountersFailed = 1031;
     public const int SseCountersValidationError = 1032;
 
+    // Kafka Counters
+    public const int KafkaCountersFailed = 1041;
+
+    // Mongo Counters
+    public const int MongoCountersFailed = 1051;
+
     // Actions
     public const int GetActionsFailed = 1101;
 
@@ -38,25 +44,14 @@ public static class ErrorCodes
         InternalError => InternalError,
 
         // Processes
-        HttpGetProcessesFailed => InternalError,
-        HttpGetProcessByIdFailed => InternalError,
-        HttpGetProcessByNameFailed => InternalError,
         HttpGetProcessesValidationError => ValidationError,
 
         // Dump
-        HttpWriteDumpFailed => InternalError,
-        HttpReadDumpFailed => InternalError,
-        HttpDeleteDumpFailed => InternalError,
         HttpDumpValidationError => ValidationError,
 
         // Counters
-        WebSocketCountersFailed => InternalError,
         WebSocketCountersValidationError => ValidationError,
-        SseCountersFailed => InternalError,
         SseCountersValidationError => ValidationError,
-
-        // Actions
-        GetActionsFailed => InternalError,
         
         // All
         _ => InternalError

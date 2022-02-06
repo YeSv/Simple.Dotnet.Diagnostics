@@ -3,17 +3,17 @@ using Simple.Dotnet.Utilities.Results;
 
 namespace Simple.Dotnet.Diagnostics.Actions.Registry;
 
-internal enum RegistryCmdType : byte { Schedule, Cancel, GetAll }
+internal enum RegistryCmdType : byte { Register, Cancel, GetAll }
 
 internal interface IRegistryCommand 
 { 
     RegistryCmdType Type { get; } 
 }
 
-internal sealed record ScheduleActionCommand(string ActionName, IAction Action) : IRegistryCommand
+internal sealed record RegisterActionCommand(string ActionName, IAction Action) : IRegistryCommand
 {
-    public RegistryCmdType Type => RegistryCmdType.Schedule;
-    public TaskCompletionSource<Task<UniResult<Unit, Exception>>> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public RegistryCmdType Type => RegistryCmdType.Register;
+    public TaskCompletionSource<UniResult<Task<UniResult<Unit, Exception>>, Exception>> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 }
 
 internal sealed record CancelActionCommand(string ActionName) : IRegistryCommand
