@@ -41,14 +41,29 @@ public sealed class WsCounters
 
         token.Register(() => registry.Cancel(actionName));
 
-        var actionResult = await registry.Schedule(actionName, action);
+        // TODO: write tests and rewrite the impl
+        var registerResult = await registry.Register(actionName, action);
+        if (!registerResult.IsOk)
+        {
+            logger.LogWarning(registerResult.Error, "Failed to register a new ws action");
 
-        await CloseWs(ws, logger, actionName, actionResult, token);
+            await CloseWs(ws, logger, actionName, registerResult, token);
+            return Results.Ok();
+        }
+
+        var actionResult = await registerResult.Ok!;
+        if (!actionResult.IsOk)
+        {
+            logger.LogWarning(actionResult.Error, "An error occurred while executing an action. Action: {Action}", actionName);
+
+            await CloseWs(ws, logger, actionName, registerResult, token);
+            return Results.Ok();
+        }
         
         return Results.Ok();
     }
 
-    static Task CloseWs(WebSocket ws, ILogger logger, string actionName, UniResult<Unit, Exception> subscriptionResult, CancellationToken token) =>
+    static Task CloseWs<T>(WebSocket ws, ILogger logger, string actionName, UniResult<T, Exception> subscriptionResult, CancellationToken token) where T : class =>
         ws.CloseAsync(subscriptionResult switch
         {
             { IsOk: false } => WebSocketCloseStatus.InternalServerError,
