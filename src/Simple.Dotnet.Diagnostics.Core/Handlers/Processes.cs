@@ -50,7 +50,7 @@ public static class Processes
             var processes = Handle(new GetProcessesByNameQuery(query.ProcessName), token);
             if (!processes.IsOk) return Result.Error<ProcessInfo, DiagnosticsError>(processes.Error);
             if (processes.Ok!.Length == 0) return Result.Error<ProcessInfo, DiagnosticsError>(new($"Process with specified name '{query.ProcessName}' was not found"));
-            if (processes.Ok!.Length > 0) return Result.Error<ProcessInfo, DiagnosticsError>(new($"Found multiple processes with name '{query.ProcessName}'"));
+            if (processes.Ok!.Length > 1) return Result.Error<ProcessInfo, DiagnosticsError>(new($"Found multiple processes with name '{query.ProcessName}'"));
 
             return new(processes.Ok[0]);
         }

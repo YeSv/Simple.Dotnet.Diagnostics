@@ -336,3 +336,6 @@ ASALocalRun/
 
 .fake
 .ionide
+
+**/traces
+**/dumps

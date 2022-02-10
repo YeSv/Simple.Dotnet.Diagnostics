@@ -19,16 +19,16 @@ public sealed class MongoConfig
     public string ValueField { get; set; } = "value";
 }
 
-public sealed class Mongo : IStream
+public sealed class MongoStream : IStream
 {
     static readonly InsertManyOptions ManyOpts = new() { IsOrdered = false };
 
     readonly MongoConfig _config;
     readonly IMongoCollection<BsonDocument> _collection;
 
-    public Mongo(IConfigurationSection configuration) : this(configuration.Get<MongoConfig>()) { }
+    public MongoStream(IConfigurationSection configuration) : this(configuration.Get<MongoConfig>()) { }
 
-    public Mongo(MongoConfig config)
+    public MongoStream(MongoConfig config)
     {
         _config = config;
         _collection = new MongoClient(config.ConnectionString).GetDatabase(config.Database).GetCollection<BsonDocument>(config.Collection);

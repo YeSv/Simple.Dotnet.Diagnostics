@@ -10,7 +10,7 @@ public sealed class HttpProcesses
         var result = Processes.Handle(token);
         if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Get processes failed with error: {ErrorMessage}", result.Error);
 
@@ -27,7 +27,7 @@ public sealed class HttpProcesses
         var result = Processes.Handle(query, token);
         if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Get processes by id {ProcessId} failed with error: {ErrorMessage}", query.ProcessId, result.Error);
 
@@ -44,7 +44,7 @@ public sealed class HttpProcesses
         var result = Processes.Handle(query, token);
         if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
 
-        logger.LogError(
+        logger.LogWarning(
             result.Error.Exception,
             "Get processes by name {ProcessName} failed with error: {ErrorMessage}", query.ProcessName, result.Error);
 

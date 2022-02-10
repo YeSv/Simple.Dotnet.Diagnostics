@@ -11,12 +11,12 @@ public sealed class MongoCounters
 {
     public static async Task<IResult> Handle(
         CountersQuery query,
-        MongoConfig mongo,
+        MongoConfig config,
         ActionsRegistry registry,
         ILogger logger)
     {
         var name = $"mongo-action-{Guid.NewGuid()}";
-        var action = ActionTypes.NonStop(name, logger, () => new Mongo(mongo), () =>
+        var action = ActionTypes.NonStop(name, logger, () => new MongoStream(config), () =>
         {
             var subscriptionResult = Counters.Handle(ref query, CancellationToken.None); // Cancellation is not bound to a request
             if (subscriptionResult.IsOk) return subscriptionResult.Ok!;

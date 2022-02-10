@@ -3,14 +3,15 @@ using Simple.Dotnet.Diagnostics.Actions.Registry;
 using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
+using Simple.Dotnet.Diagnostics.Host.AspNetCore.HostedServices;
 using Simple.Dotnet.Diagnostics.Host.Handlers;
 using Simple.Dotnet.Diagnostics.Streams.Streams;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 // Pre-create required directories
-Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Dump.DumpsDir), default).Ok!);
-Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery("traces"), default).Ok!); // TODO: add Trace handler
+Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Dumps.DumpsDir), default).Ok!);
+Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Traces.TracesDir), default).Ok!);
 
 // Start application
 var builder = WebApplication.CreateBuilder(args);
@@ -29,7 +30,12 @@ builder.Services
     .Configure<AppConfig>(builder.Configuration.GetSection(nameof(AppConfig)))
     
     // Services
+    .AddSingleton<IConfiguration>(builder.Configuration)
     .AddSingleton<ActionsRegistry>()
+
+    // Hosted services
+
+    .AddHostedService<LoggerCountersHostedService>()
 
     // Health
     .AddSingleton<ActionsHealthCheck>()
@@ -55,18 +61,49 @@ app.MapGet("/processes/pid/{pid}", (
     CancellationToken token) => HttpProcesses.Get(new GetProcessByIdQuery(processId), logger, token));
 
 // Dumps
-app.MapPost("/dump/write", (
+app.MapPost("/dumps/write", (
     [FromQuery(Name = "pid")] int? processId, 
     [FromQuery(Name = "pname")] string? processName, 
     [FromQuery(Name = "type")] DumpType? type, 
-    [FromServices] ILogger<HttpDump> logger,
-    CancellationToken token) => HttpDump.Write(new(processId, processName, type, default), logger, token));
+    [FromServices] ILogger<HttpDumps> logger,
+    CancellationToken token) => HttpDumps.Write(new(processId, processName, type, default), logger, token));
 
-app.MapGet("/dump", ([FromQuery] string name, [FromServices] ILogger<HttpDump> logger, CancellationToken token) => HttpDump.Read(new(name), logger, token));
+app.MapGet("/dumps", (
+    [FromQuery] string name, 
+    [FromServices] ILogger<HttpDumps> logger, 
+    CancellationToken token) => HttpDumps.Read(new(name), logger, token));
 
-app.MapGet("/dump/all", ([FromServices] ILogger<HttpDump> logger, CancellationToken token) => HttpDump.GetDumps(logger, token));
+app.MapGet("/dumps/all", (
+    [FromServices] ILogger<HttpDumps> logger, 
+    CancellationToken token) => HttpDumps.GetDumps(logger, token));
 
-app.MapDelete("/dump", ([FromQuery] string name, [FromServices] ILogger<HttpDump> logger, CancellationToken token) => HttpDump.Delete(new(name), logger, token));
+app.MapDelete("/dumps", (
+    [FromQuery] string name, 
+    [FromServices] ILogger<HttpDumps> logger, 
+    CancellationToken token) => HttpDumps.Delete(new(name), logger, token));
+
+// Traces
+
+app.MapPost("/traces/write", (
+    [FromQuery(Name = "pid")] int? processId,
+    [FromQuery(Name = "pname")] string? processName,
+    [FromQuery(Name = "duration")] TimeSpan? duration,
+    [FromServices] ILogger<HttpTraces> logger,
+    CancellationToken token) => HttpTraces.Write(new(processId, processName, duration, default), logger, token));
+
+app.MapGet("/traces", (
+    [FromQuery] string name,
+    [FromServices] ILogger<HttpDumps> logger,
+    CancellationToken token) => HttpTraces.Read(new(name), logger, token));
+
+app.MapGet("/traces/all", (
+    [FromServices] ILogger<HttpTraces> logger,
+    CancellationToken token) => HttpTraces.GetTraces(logger, token));
+
+app.MapDelete("/traces", (
+    [FromQuery] string name,
+    [FromServices] ILogger<HttpTraces> logger,
+    CancellationToken token) => HttpTraces.Delete(new(name), logger, token));
 
 // Counters
 app.MapGet("/counters/ws", (

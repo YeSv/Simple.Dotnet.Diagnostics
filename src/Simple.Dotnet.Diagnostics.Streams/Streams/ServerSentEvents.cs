@@ -1,7 +1,6 @@
 ﻿using Cysharp.Text;
 using Microsoft.AspNetCore.Http;
 using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
-using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using System.Text.Json;
 
@@ -68,13 +67,10 @@ public sealed class SseStream : IStream
         try
         {
             using var builder = new Utf8ValueStringBuilder(true);
-            using var writer = BufferWriterPool<byte>.Shared.Get();
-
-            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), metric, options);
 
             builder.Append($"event: {nameof(SseEventType.Single)}\n");
             builder.Append("data: ");
-            builder.Append(writer.Value.WrittenMemory);
+            builder.Append(JsonSerializer.Serialize(metric, options));
             builder.Append('\n');
             builder.Append('\n');
 
@@ -92,13 +88,10 @@ public sealed class SseStream : IStream
         try
         {
             using var builder = new Utf8ValueStringBuilder(true);
-            using var writer = BufferWriterPool<byte>.Shared.Get();
-
-            JsonSerializer.Serialize(new Utf8JsonWriter(writer.Value), batch, options);
 
             builder.Append($"event: {nameof(SseEventType.Batch)}\n");
             builder.Append("data: ");
-            builder.Append(writer.Value.WrittenMemory);
+            builder.Append(JsonSerializer.Serialize(batch.ToArray(), options)); // Alloc...
             builder.Append('\n');
             builder.Append('\n');
 
