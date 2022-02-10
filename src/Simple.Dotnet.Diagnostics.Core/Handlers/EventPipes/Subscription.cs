@@ -8,31 +8,53 @@ using System.Threading.Tasks;
 
 namespace Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 
-public sealed class Subscription : IDisposable
+public sealed class Subscription
 {
-    CancellationTokenSource? _cts;
-    TaskCompletionSource<UniResult<Unit, Exception>>? _tcs;
+    static readonly Task<UniResult<Unit, Exception>> UsedResult =
+        Task.FromResult<UniResult<Unit, Exception>>(new(new Exception("This subscription can be used only once")));
 
-    readonly EventPipeSession _session;
-    readonly EventPipeEventSource _source;
+    EventPipeSession? _session;
 
-    public Subscription(EventPipeSession session, EventPipeEventSource source)
-    {
-        _source = source;
-        _session = session;
-    }
+    public Subscription(EventPipeSession session) => _session = session;
 
     public Task<UniResult<Unit, Exception>> Start(Action<EventMetric> sideEffect, CancellationToken token)
     {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-        _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (_session == null) return UsedResult;
 
-        _cts.Token.Register(s => ((EventPipeSession)s!).Stop(), _session, false); // Stop session once canceled
+        (var session, _session) = (_session, null);
+        var tcs = new TaskCompletionSource<UniResult<Unit, Exception>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        _source.Dynamic.All += e =>
+        token.Register(s => ((EventPipeSession)s!).Stop(), session, false); // Stop session once canceled
+
+        var processTask = Task.Factory.StartNew(() =>
+        {
+            using (var source = CreateSource(session, sideEffect, tcs))
+            using (session)
+            {
+                try
+                {
+                    source.Process();
+                    tcs!.TrySetResult(UniResult.Ok<Unit, Exception>(Unit.Shared));
+                }
+                catch (Exception ex)
+                {
+                    tcs!.TrySetResult(UniResult.Error<Unit, Exception>(ex));
+                }
+            }
+        }, token);
+
+        return Task.WhenAll(processTask, tcs.Task).ContinueWith(t => tcs.Task.Result);
+    }
+
+    EventPipeEventSource CreateSource(
+        EventPipeSession session, 
+        Action<EventMetric> sideEffect,
+        TaskCompletionSource<UniResult<Unit, Exception>> tcs)
+    {
+        var source = new EventPipeEventSource(session.EventStream);
+        source.Dynamic.All += e =>
         {
             if (e.EventName != "EventCounters") return;
-
             try
             {
                 var payload = (IDictionary<string, object>)((IDictionary<string, object>)e.PayloadValue(0))["Payload"];
@@ -45,35 +67,9 @@ public sealed class Subscription : IDisposable
             }
             catch (Exception ex)
             {
-                _tcs.TrySetResult(UniResult.Error<Unit, Exception>(ex));
+                tcs.TrySetResult(UniResult.Error<Unit, Exception>(ex));
             }
         };
-
-        var processTask = Task.Factory.StartNew(s =>
-        {
-            var subscription = (Subscription)s!;
-            try
-            {
-                subscription._source.Process();
-                subscription._tcs!.TrySetResult(UniResult.Ok<Unit, Exception>(Unit.Shared));
-            }
-            catch (Exception ex)
-            {
-                subscription._tcs!.TrySetResult(UniResult.Error<Unit, Exception>(ex));
-            }
-        }, this, _cts.Token);
-
-
-        return Task.WhenAll(processTask, _tcs.Task).ContinueWith((t, s) =>
-        {
-            using var subscription = (Subscription)s!;
-            return subscription._tcs!.Task.Result;
-        }, this);
-    }
-
-    void IDisposable.Dispose()
-    {
-        _source.Dispose();
-        _session.Dispose();
+        return source;
     }
 }

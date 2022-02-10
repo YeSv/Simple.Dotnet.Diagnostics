@@ -12,12 +12,12 @@ public sealed class KafkaConfig
     public Dictionary<string, string> ProducerConfig { get; set; } = new();
 }
 
-public sealed class Kafka : IStream, IDisposable
+public sealed class KafkaStream : IStream, IDisposable
 {
     private readonly KafkaConfig _config;
     private readonly IProducer<byte[], byte[]> _producer;
 
-    public Kafka(KafkaConfig config)
+    public KafkaStream(KafkaConfig config)
     {
         _config = config;
         _producer = new ProducerBuilder<byte[], byte[]>(config.ProducerConfig).Build();

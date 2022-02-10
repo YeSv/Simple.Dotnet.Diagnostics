@@ -28,7 +28,7 @@ public sealed class ActionsHealthCheck : IHealthCheck
         foreach (var (name, health) in actions)
         {
             if (health.Status == HealthStatus.Healthy) continue;
-            (details ??= new())[name] = health.Description!;
+            (details ??= new())[name] = $"{health.Description!}. Exception: {health.Exception?.Message ?? "<empty>"}";
         }
 
         if (details != null) 

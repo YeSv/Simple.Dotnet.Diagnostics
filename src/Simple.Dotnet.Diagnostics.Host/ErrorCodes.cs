@@ -36,6 +36,13 @@ public static class ErrorCodes
     // Actions
     public const int GetActionsFailed = 1101;
 
+    // Traces
+    public const int HttpWriteTraceFailed = 1201;
+    public const int HttpReadTraceFailed = 1202;
+    public const int HttpDeleteTraceFailed = 1203;
+    public const int HttpGetTracesFailed = 1204;
+    public const int HttpTracesValidationError = 1205;
+
 
     public static int ToHttpCode(int errorCode) => errorCode switch
     {
@@ -52,6 +59,9 @@ public static class ErrorCodes
         // Counters
         WebSocketCountersValidationError => ValidationError,
         SseCountersValidationError => ValidationError,
+
+        // Traces
+        HttpTracesValidationError => ValidationError,
         
         // All
         _ => InternalError

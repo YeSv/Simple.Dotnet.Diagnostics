@@ -1,4 +1,5 @@
 ﻿using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing;
 using Simple.Dotnet.Utilities.Results;
 using System;
 using System.Threading;
@@ -22,7 +23,7 @@ public static class EventPipes
             var client = new DiagnosticsClient(command.ProcessId);
             var session = client.StartEventPipeSession(command.Providers, false);
 
-            return Result.Ok<Subscription, DiagnosticsError>(new(session, new(session.EventStream)));
+            return Result.Ok<Subscription, DiagnosticsError>(new(session));
         }
         catch (Exception ex)
         {

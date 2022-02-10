@@ -11,12 +11,12 @@ public sealed class KafkaCounters
 {
     public static async Task<IResult> Handle(
         CountersQuery query,
-        KafkaConfig kafka,
+        KafkaConfig config,
         ActionsRegistry registry,
         ILogger logger)
     {
         var name = $"kafka-action-{Guid.NewGuid()}";
-        var action = ActionTypes.NonStop(name, logger, () => new Kafka(kafka), () =>
+        var action = ActionTypes.NonStop(name, logger, () => new KafkaStream(config), () =>
         {
             var subscriptionResult = Counters.Handle(ref query, CancellationToken.None); // Cancellation is not bound to a request
             if (subscriptionResult.IsOk) return subscriptionResult.Ok!;

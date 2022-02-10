@@ -1,9 +1,13 @@
 ﻿using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing.Parsers;
 using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
@@ -38,15 +42,15 @@ public sealed class Counters
         var parsedProviders = ParseProviders(query.Providers);
         if (!parsedProviders.IsOk) return new(new DiagnosticsError("Failed to parse providers"));
 
-        var providerArguments = query.RefreshInterval == null ? null : new Dictionary<string, string>
+        var providerArguments = new Dictionary<string, string>
         {
-            ["EventCounterIntervalSec"] = query.RefreshInterval!.Value.ToString()
+            ["EventCounterIntervalSec"] = (query.RefreshInterval ?? 10).ToString()
         };
 
         if (query.Providers is null or { Length: 0 }) return EventPipes.EventPipes.Handle(new(query.ProcessId!.Value,
             new EventPipeProvider[]
             {
-                new (Registry.DefaultName, Registry.Default.Level, Registry.Default.Keywords, providerArguments)
+                new EventPipeProvider(Registry.Default.Name, Registry.Default.Level, Registry.Default.Keywords, providerArguments)
             }),
             token);
 
@@ -55,10 +59,10 @@ public sealed class Counters
             using var providers = new Rent<EventPipeProvider>(query.Providers!.Length);
             foreach (var providerName in parsedProviders.Ok!)
             {
-                if (!Registry.KnownProviders.TryGetValue(providerName, out var provider)) 
-                    return Result.Error<Subscription, DiagnosticsError>(new($"Unknown provider name: '{providerName}'"));
+                var provider = Registry.Find(providerName);
+                if (provider is null) return Result.Error<Subscription, DiagnosticsError>(new($"Unknown provider name: '{providerName}'"));
 
-                providers.Append(new(provider.Name, provider.Level, provider.Keywords, providerArguments));
+                providers.Append(new(provider!.Value.Name, provider.Value.Level, provider.Value.Keywords, providerArguments));
             }
 
             return EventPipes.EventPipes.Handle(new(query.ProcessId!.Value, providers.WrittenSpan.ToArray()), token);
@@ -69,6 +73,7 @@ public sealed class Counters
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     static UniResult<string[], Exception> ParseProviders(string? providers)
     {
         if (string.IsNullOrWhiteSpace(providers)) return new(Array.Empty<string>());
