@@ -5,6 +5,7 @@ using Simple.Dotnet.Diagnostics.Host;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore.HostedServices;
 using Simple.Dotnet.Diagnostics.Host.Handlers;
+using Simple.Dotnet.Diagnostics.Host.Interceptors;
 using Simple.Dotnet.Diagnostics.Streams.Streams;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,9 +13,11 @@ using System.Text.Json.Serialization;
 // Pre-create required directories
 Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Dumps.DumpsDir), default).Ok!);
 Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Traces.TracesDir), default).Ok!);
+Directory.CreateDirectory(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Interceptors.InterceptorsDir), default).Ok!);
 
 // Start application
 var builder = WebApplication.CreateBuilder(args);
+var interceptors = Interceptors.Load(new(Paths.Handle(new GetLocalPathForDirectoryNameQuery(Interceptors.InterceptorsDir), default).Ok!)).ToList();
 
 // Utils
 builder.Logging.ClearProviders().AddConsole();
@@ -41,6 +44,8 @@ builder.Services
     .AddSingleton<ActionsHealthCheck>()
     .AddHealthChecks()
     .AddCheck<ActionsHealthCheck>("actions", timeout: TimeSpan.FromSeconds(5));
+
+interceptors.ForEach(i => i.Intercept(builder));
 
 // Build app
 var app = builder.Build();
@@ -162,6 +167,8 @@ app.MapHealthChecks("/healthcheck", new()
     AllowCachingResponses = false,
     ResponseWriter = HealthFormatter.WriteResponse
 });
+
+interceptors.ForEach(interceptor => interceptor.Intercept(app));
 
 // Run
 app.Run();
