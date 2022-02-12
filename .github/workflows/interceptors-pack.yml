@@ -35,7 +35,8 @@ jobs:
           src/Simple.Dotnet.Diagnostics.Interceptors/Simple.Dotnet.Diagnostics.Interceptors.csproj
           -c Release 
           --no-build 
-          -p:Version=${{ env.GIT_TAG }} 
+          -p:Version=${{ env.GIT_TAG }}
+          -p:PackageVersion=${{ env.GIT_TAG }} 
           -p:NuspecFile=./Simple.Dotnet.Diagnostics.Interceptors.nuspec 
           -o ./publish
       - name: Create artifact
