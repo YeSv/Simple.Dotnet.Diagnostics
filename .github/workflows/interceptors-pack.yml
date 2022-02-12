@@ -36,7 +36,7 @@ jobs:
           -c Release 
           --no-build 
           -p:Version=${{ env.GIT_TAG }} 
-          -p:NuspecFile=src/Simple.Dotnet.Diagnostics.Interceptors/Simple.Dotnet.Diagnostics.Interceptors.nuspec 
+          -p:NuspecFile=./Simple.Dotnet.Diagnostics.Interceptors.nuspec 
           -o ./publish
       - name: Create artifact
         uses: actions/upload-artifact@v1
