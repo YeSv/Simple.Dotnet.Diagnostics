@@ -2,7 +2,6 @@
 <package>
     <metadata>
         <id>Simple.Dotnet.Diagnostics.Interceptors</id>
-        <version>0.0.1</version>
         <authors>YeSv</authors>
         <projectUrl>http://github.com/YeSv/Simple.Dotnet.Diagnostics</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
