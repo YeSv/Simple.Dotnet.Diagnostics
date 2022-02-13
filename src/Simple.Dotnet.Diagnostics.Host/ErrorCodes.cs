@@ -19,20 +19,6 @@ public static class ErrorCodes
     public const int HttpGetProcessByNameFailed = 1013;
     public const int HttpGetProcessesValidationError = 1014;
 
-    // WebSocket Counters
-    public const int WebSocketCountersFailed = 1021;
-    public const int WebSocketCountersValidationError = 1022;
-
-    // ServerSentEvents Counters
-    public const int SseCountersFailed = 1031;
-    public const int SseCountersValidationError = 1032;
-
-    // Kafka Counters
-    public const int KafkaCountersFailed = 1041;
-
-    // Mongo Counters
-    public const int MongoCountersFailed = 1051;
-
     // Actions
     public const int GetActionsFailed = 1101;
 
@@ -55,10 +41,6 @@ public static class ErrorCodes
 
         // Dump
         HttpDumpValidationError => ValidationError,
-
-        // Counters
-        WebSocketCountersValidationError => ValidationError,
-        SseCountersValidationError => ValidationError,
 
         // Traces
         HttpTracesValidationError => ValidationError,

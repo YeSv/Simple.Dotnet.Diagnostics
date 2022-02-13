@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
-using Simple.Dotnet.Utilities.Buffers;
+﻿using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
 using System.Threading.Tasks.Dataflow;
 
@@ -37,7 +35,7 @@ public sealed class ActionsRegistry
         return cmd.Tcs.Task;
     }
 
-    public Task<Result<(string Name, HealthCheckResult Health)[], Exception>> GetActions()
+    public Task<Result<(string Name, ActionHealthResult Health)[], Exception>> GetActions()
     {
         var cmd = new GetAllActionsCommand();
         _processor.Post(cmd);
@@ -91,7 +89,7 @@ public sealed class ActionsRegistry
     {
         try
         {
-            using var rent = new Rent<(string, HealthCheckResult)>(_actions.Count);
+            using var rent = new Rent<(string, ActionHealthResult)>(_actions.Count);
             foreach (var (name, owner) in _actions) rent.Append(new(name, owner.Action.GetHealth()));
 
             cmd.Tcs.TrySetResult(new(rent.WrittenSpan.ToArray()));

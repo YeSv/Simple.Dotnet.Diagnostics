@@ -1,0 +1,4 @@
+﻿logging:
+  logLevel:
+    default: "Information"
+    microsoft.aspnetcore: "Warning"

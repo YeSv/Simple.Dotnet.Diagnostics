@@ -16,14 +16,15 @@
 	<NuspecProperties>version=$(Version)</NuspecProperties>
   </PropertyGroup>
 
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Actions\Simple.Dotnet.Diagnostics.Actions.csproj" />
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Core\Simple.Dotnet.Diagnostics.Core.csproj" />
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Streams\Simple.Dotnet.Diagnostics.Streams.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
   
 </Project>

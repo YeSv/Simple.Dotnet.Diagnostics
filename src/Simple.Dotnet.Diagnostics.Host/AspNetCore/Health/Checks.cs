@@ -27,8 +27,8 @@ public sealed class ActionsHealthCheck : IHealthCheck
         var details = default(Dictionary<string, object>);
         foreach (var (name, health) in actions)
         {
-            if (health.Status == HealthStatus.Healthy) continue;
-            (details ??= new())[name] = $"{health.Description!}. Exception: {health.Exception?.Message ?? "<empty>"}";
+            if (health.IsHealthy) continue;
+            (details ??= new())[name] = $"{health.Reason!}. Exception: {health.Error?.Message ?? "<empty>"}";
         }
 
         if (details != null) 

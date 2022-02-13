@@ -1,10 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Interceptors\Simple.Dotnet.Diagnostics.Interceptors.csproj" />

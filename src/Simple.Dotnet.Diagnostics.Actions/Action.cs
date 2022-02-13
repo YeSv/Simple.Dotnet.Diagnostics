@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
 using Simple.Dotnet.Diagnostics.Streams;
 using Simple.Dotnet.Utilities.Buffers;
@@ -19,7 +18,7 @@ public sealed class ActionConfig
 
 public sealed class Action : IAction
 {
-    HealthCheckResult _health = HealthCheckResult.Healthy();
+    ActionHealthResult _health = new(true, null, null);
 
     readonly ILogger _logger;
     readonly ActionConfig _config;
@@ -43,7 +42,7 @@ public sealed class Action : IAction
 
     public string Name { get; }
 
-    public HealthCheckResult GetHealth() => _health;
+    public ActionHealthResult GetHealth() => _health;
 
     public Task<UniResult<Unit, Exception>> Execute(CancellationToken token) => Task.Run(async () =>
     {
@@ -52,13 +51,13 @@ public sealed class Action : IAction
 
         while (!token.IsCancellationRequested && retries-- >= 0)
         {
-            _health = HealthCheckResult.Healthy("Started a new execution cycle");
+            _health = ActionHealthResult.Healthy("Started a new execution cycle");
 
             result = await ExecuteOnce(token);
 
             if (!result.IsOk)
             {
-                _health = HealthCheckResult.Unhealthy("Execution failed with unhandled error", result.Error);
+                _health = ActionHealthResult.Unhealthy("Execution failed with unhandled error", result.Error);
                 _logger.LogError(result.Error!, "Action execution failed with unhandled error. Action: {Action}", Name);
             }
 

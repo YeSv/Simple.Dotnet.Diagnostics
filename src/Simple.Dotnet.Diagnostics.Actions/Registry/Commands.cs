@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Simple.Dotnet.Utilities.Results;
+﻿using Simple.Dotnet.Utilities.Results;
 
 namespace Simple.Dotnet.Diagnostics.Actions.Registry;
 
@@ -25,5 +24,5 @@ internal sealed record CancelActionCommand(string ActionName) : IRegistryCommand
 internal sealed record GetAllActionsCommand() : IRegistryCommand
 {
     public RegistryCmdType Type => RegistryCmdType.GetAll;
-    public TaskCompletionSource<Result<(string Name, HealthCheckResult Health)[], Exception>> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<Result<(string Name, ActionHealthResult Health)[], Exception>> Tcs { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 }
