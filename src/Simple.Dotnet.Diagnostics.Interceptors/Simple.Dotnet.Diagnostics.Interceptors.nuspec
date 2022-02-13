@@ -3,6 +3,7 @@
     <metadata>
         <id>Simple.Dotnet.Diagnostics.Interceptors</id>
         <authors>YeSv</authors>
+        <version>0.0.1</version>
         <projectUrl>http://github.com/YeSv/Simple.Dotnet.Diagnostics</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>Interceptors base dll for Simple.Dotnet.Diagnostics</description>
