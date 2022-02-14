@@ -9,7 +9,6 @@ on:
 env:
   GIT_TAG: ${{ github.event.inputs.tag }}
 
-
 jobs:
   build-dotnet:
     runs-on: ubuntu-latest
@@ -27,25 +26,16 @@ jobs:
         uses: actions/setup-dotnet@v1.7.2
         with:
           dotnet-version: ${{ matrix.dotnet-version }}
-      - name: Build
-        run: dotnet build src/Simple.Dotnet.Diagnostics.Interceptors -c Release -p:Version=${{ env.GIT_TAG }}
-      - name: Pack 
-        run: >
-          dotnet pack 
-          src/Simple.Dotnet.Diagnostics.Interceptors/Simple.Dotnet.Diagnostics.Interceptors.csproj
-          -c Release 
-          --no-build 
-          -p:Version=${{ env.GIT_TAG }}
-          -p:NuspecFile=./Simple.Dotnet.Diagnostics.Interceptors.nuspec
-          -p:PackageVersion=${{ env.GIT_TAG }}
-          -o ./publish
+      - name: Build solution
+        run: dotnet build Simple.Dotnet.Diagnostics.sln -c Release -p:Version=${{ env.GIT_TAG }}
+      - name: Pack solution
+        run: dotnet pack Simple.Dotnet.Diagnostics.sln -c Release --no-build -p:Version=${{ env.GIT_TAG }} -o ./publish
       - name: Create artifact
         uses: actions/upload-artifact@v1
         with:
           name: package
           path: ./publish/
           retention-days: 1
-
   publish-artifact:
     needs: [build-dotnet]
     runs-on: ubuntu-latest

@@ -1,9 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+	<TargetFramework>net6.0</TargetFramework>
+	<Nullable>enable</Nullable>
+	<ImplicitUsings>enable</ImplicitUsings>
+	<LangVersion>latest</LangVersion>
+	<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+	<Authors>YeSv</Authors>
+	<Version>0.0.1</Version>
+	<Description>Actions for Simple.Dotnet.Diagnostics</Description>
+	<PackageTags>diagnostics, interceptors, event pipes</PackageTags>
+	<PackageProjectUrl>https://github.com/YeSv/Simple.Dotnet.Diagnostics</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/YeSv/Simple.Dotnet.Diagnostics</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

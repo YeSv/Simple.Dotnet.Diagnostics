@@ -8,23 +8,16 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Authors>YeSv</Authors>
+	  <Version>0.0.1</Version>
     <Description>Interceptors base package for Simple.Dotnet.Diagnostics</Description>
     <PackageTags>diagnostics, interceptors, event pipes</PackageTags>
     <PackageProjectUrl>https://github.com/YeSv/Simple.Dotnet.Diagnostics</PackageProjectUrl>
     <RepositoryUrl>https://github.com/YeSv/Simple.Dotnet.Diagnostics</RepositoryUrl>
-  
-	<NuspecProperties>version=$(Version)</NuspecProperties>
   </PropertyGroup>
 
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Simple.Dotnet.Utilities" Version="1.0.6" />
-    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.257301" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.74" />
   </ItemGroup>
 
   <ItemGroup>
