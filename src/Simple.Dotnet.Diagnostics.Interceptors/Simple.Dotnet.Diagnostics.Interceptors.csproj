@@ -22,6 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Simple.Dotnet.Utilities" Version="1.0.6" />
+    <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.257301" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="2.0.74" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Actions\Simple.Dotnet.Diagnostics.Actions.csproj" />
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Core\Simple.Dotnet.Diagnostics.Core.csproj" />
     <ProjectReference Include="..\Simple.Dotnet.Diagnostics.Streams\Simple.Dotnet.Diagnostics.Streams.csproj" />
