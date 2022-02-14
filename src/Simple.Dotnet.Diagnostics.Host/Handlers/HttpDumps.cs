@@ -1,5 +1,7 @@
 ﻿using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore;
+using Simple.Dotnet.Diagnostics.Interceptors;
+using Simple.Dotnet.Diagnostics.Interceptors.AspNetCore;
 
 namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 

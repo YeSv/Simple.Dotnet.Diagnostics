@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Simple.Dotnet.Diagnostics.Interceptors.AspNetCore;
 
 namespace Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
 

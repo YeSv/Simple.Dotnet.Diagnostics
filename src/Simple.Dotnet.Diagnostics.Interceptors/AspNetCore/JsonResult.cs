@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Http.Json;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Simple.Dotnet.Utilities.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-namespace Simple.Dotnet.Diagnostics.Host.AspNetCore;
+namespace Simple.Dotnet.Diagnostics.Interceptors.AspNetCore;
 
 public static class JsonResult
 {
@@ -33,4 +35,3 @@ public sealed record class JsonResult<T>(T? Value, int? StatusCode) : IResult
         await httpContext.Response.BodyWriter.FlushAsync();
     }
 }
-
