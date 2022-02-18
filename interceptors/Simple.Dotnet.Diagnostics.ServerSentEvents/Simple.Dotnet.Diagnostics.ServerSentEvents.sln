@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simple.Dotnet.Diagnostics.ServerSentEvents", "src\Simple.Dotnet.Diagnostics.ServerSentEvents.csproj", "{CCE11046-1B5B-4C8A-9814-C1918FB596E1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{62B32310-E15C-465C-BDE4-E8407EEE9537}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CCE11046-1B5B-4C8A-9814-C1918FB596E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCE11046-1B5B-4C8A-9814-C1918FB596E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCE11046-1B5B-4C8A-9814-C1918FB596E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCE11046-1B5B-4C8A-9814-C1918FB596E1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CCE11046-1B5B-4C8A-9814-C1918FB596E1} = {62B32310-E15C-465C-BDE4-E8407EEE9537}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A5CA71D6-9927-456C-820C-1ABD205698A4}
+	EndGlobalSection
+EndGlobal
