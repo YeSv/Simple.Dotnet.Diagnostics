@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<PackageReference Include="Simple.Dotnet.Diagnostics.Interceptors" Version="0.0.8">
+	<PackageReference Include="Simple.Dotnet.Diagnostics.Interceptors" Version="0.0.10">
 		<ExcludeAssets>runtime</ExcludeAssets>
 	</PackageReference>
   </ItemGroup>

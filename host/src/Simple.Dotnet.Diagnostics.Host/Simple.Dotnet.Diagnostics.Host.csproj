@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" /> 
-    <PackageReference Include="Simple.Dotnet.Diagnostics.Interceptors" Version="0.0.8" />
+    <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" />
+    <PackageReference Include="Simple.Dotnet.Diagnostics.Interceptors" Version="0.0.10" /> 
   </ItemGroup>
 
 </Project>

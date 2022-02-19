@@ -1,6 +1,6 @@
 ﻿using Cysharp.Text;
 using Microsoft.AspNetCore.Http;
-using Simple.Dotnet.Diagnostics.Core.Handlers.EventPipes;
+using Simple.Dotnet.Diagnostics.Core.Handlers.Counters;
 using Simple.Dotnet.Diagnostics.Streams;
 using Simple.Dotnet.Utilities.Results;
 using System.Text.Json;
@@ -22,7 +22,7 @@ public sealed class SseStream : IStream
         _response.Headers["Cache-Control"] = "no-cache";
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(EventMetric metric, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(CounterMetric metric, CancellationToken token)
     {
         var formatResult = Format(metric, _options);
         if (formatResult.IsOk) return new(Send(formatResult.Ok, token));
@@ -31,7 +31,7 @@ public sealed class SseStream : IStream
         return new(UniResult.Error<Unit, Exception>(formatResult.Error!));
     }
 
-    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<EventMetric> batch, CancellationToken token)
+    public ValueTask<UniResult<Unit, Exception>> Send(ReadOnlyMemory<CounterMetric> batch, CancellationToken token)
     {
         if (batch.Length == 0) return new(UniResult.Ok<Unit, Exception>(Unit.Shared));
         if (batch.Length == 1) return Send(batch.Span[0], token);
@@ -63,7 +63,7 @@ public sealed class SseStream : IStream
     }
 
     // Serializes commands
-    static Result<ReadOnlyMemory<byte>, Exception> Format(in EventMetric metric, JsonSerializerOptions? options)
+    static Result<ReadOnlyMemory<byte>, Exception> Format(in CounterMetric metric, JsonSerializerOptions? options)
     {
         try
         {
@@ -84,7 +84,7 @@ public sealed class SseStream : IStream
     }
 
     // Serializes commands
-    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<EventMetric> batch, JsonSerializerOptions? options)
+    static Result<ReadOnlyMemory<byte>, Exception> Format(ReadOnlyMemory<CounterMetric> batch, JsonSerializerOptions? options)
     {
         try
         {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Any;
 using Simple.Dotnet.Diagnostics.Actions.Registry;
 using Simple.Dotnet.Diagnostics.Core.Handlers;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore.Health;
@@ -28,16 +29,25 @@ builder.Configuration
 
 // Services
 builder.Services
+    .Configure<JsonOptions>(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)))
     .Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(o =>
     {
         o.SerializerOptions.WriteIndented = true;
         o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
     })
-    
+
     // Services
     .AddSingleton<IConfiguration>(builder.Configuration)
     .AddSingleton<ActionsRegistry>()
+
+    // Swagger
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen(c =>
+    {
+        c.MapType<TimeSpan>(() => new() { Type = "string", Example = new OpenApiString("00:00:00") });
+        c.MapType<TimeSpan?>(() => new() { Type = "string", Example = new OpenApiString("00:00:00") });
+    })
 
     // Health
     .AddSingleton<ActionsHealthCheck>()
@@ -48,6 +58,10 @@ interceptors.ForEach(interceptor => interceptor.Intercept(builder));
 
 // Build app
 var app = builder.Build();
+
+// Swaggeer
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Processes
 app.MapGet("/processes", (
