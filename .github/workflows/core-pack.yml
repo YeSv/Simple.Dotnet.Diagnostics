@@ -1,4 +1,4 @@
-name: interceptors-pack
+name: core-pack
 on:
   workflow_dispatch:
     inputs:
