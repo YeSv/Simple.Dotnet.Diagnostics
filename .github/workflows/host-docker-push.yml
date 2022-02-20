@@ -26,4 +26,4 @@ jobs:
           context: ./host
           file: ./host/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/simple-dotnet-diagnostics:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:latest
