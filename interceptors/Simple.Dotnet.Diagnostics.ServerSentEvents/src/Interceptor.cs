@@ -12,7 +12,7 @@ public sealed class ServerSentEventsInterceptor : IInterceptor
     public void Intercept(WebApplicationBuilder builder) { }
 
     public void Intercept(WebApplication application) => 
-        application.MapGet("/counters/sse", (
+        application.MapGet("actions/counters/sse", (
             [FromQuery(Name = "pid")] int? processId,
             [FromQuery(Name = "pname")] string? processName,
             [FromQuery(Name = "providers")] string? providers,
