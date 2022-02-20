@@ -1,14 +1,11 @@
 ﻿using Microsoft.Diagnostics.NETCore.Client;
 using Simple.Dotnet.Utilities.Buffers;
 using Simple.Dotnet.Utilities.Results;
-using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 
 namespace Simple.Dotnet.Diagnostics.Core.Handlers;
 
-public readonly record struct ProcessInfo(int ProcessId, string ProcessName, string FileName);
+public readonly record struct ProcessInfo(int ProcessId, string ProcessName, string FileName, bool IsDiagnosticsHost);
 
 public readonly record struct GetProcessByIdQuery(int ProcessId);
 
@@ -18,6 +15,8 @@ public readonly record struct GetProcessesByNameQuery(string ProcessName);
 
 public static class Processes
 {
+    static readonly int Id = Process.GetCurrentProcess().Id;
+
     public static Result<ProcessInfo, DiagnosticsError> Handle(in GetProcessByIdQuery query, CancellationToken token)
     {
         try
@@ -32,7 +31,7 @@ public static class Processes
                 var process = Process.GetProcessById(processId);
                 if (process == null) break;
 
-                return Result.Ok<ProcessInfo, DiagnosticsError>(new(query.ProcessId, process.ProcessName, process.MainModule?.FileName ?? string.Empty));
+                return Result.Ok<ProcessInfo, DiagnosticsError>(new(query.ProcessId, process.ProcessName, process.MainModule?.FileName ?? string.Empty, process.Id == Id));
             }
 
             return Result.Error<ProcessInfo, DiagnosticsError>(new($"Process with specified id '{query.ProcessId}' was not found"));
@@ -78,7 +77,7 @@ public static class Processes
                 var process = Process.GetProcessById(processId);
                 if (process?.ProcessName != query.ProcessName) continue;
 
-                processes.Append(new(processId, query.ProcessName, process.MainModule?.FileName ?? string.Empty));
+                processes.Append(new(processId, query.ProcessName, process.MainModule?.FileName ?? string.Empty, process.Id == Id));
             }
 
             return new(processes.Written switch
@@ -111,7 +110,7 @@ public static class Processes
                 var process = Process.GetProcessById(processId);
                 if (process == null) continue;
 
-                processes.Append(new(processId, process.ProcessName, process.MainModule?.FileName ?? string.Empty));
+                processes.Append(new(processId, process.ProcessName, process.MainModule?.FileName ?? string.Empty, process.Id == Id));
             }
 
             return new(processes.Written switch
