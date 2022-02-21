@@ -6,6 +6,9 @@ on:
         description: "tag: git tag"
         required: false
 
+env:
+  GIT_TAG: ${{ github.event.inputs.tag }}
+
 jobs:
   push-docker:
     runs-on: ubuntu-latest
@@ -26,4 +29,6 @@ jobs:
           context: ./host
           file: ./host/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:{{ env.GIT_TAG }}
