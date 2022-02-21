@@ -20,10 +20,10 @@ var interceptors = Interceptors.Load(new(Paths.Handle(new GetLocalPathForDirecto
 // Utils
 builder.Logging.ClearProviders().AddConsole();
 builder.Configuration
-    .AddJsonFile("application.json", true, true)
-    .AddJsonFile($"application.{builder.Environment.EnvironmentName}.json", true, true)
-    .AddYamlFile("application.yaml", true, true)
-    .AddYamlFile($"application.{builder.Environment.EnvironmentName}.yaml", true, true)
+    .AddJsonFile("appsettings.json", true, true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", true, true)
+    .AddYamlFile("appsettings.yaml", true, true)
+    .AddYamlFile($"appsettings.{builder.Environment.EnvironmentName}.yaml", true, true)
     .AddEnvironmentVariables()
     .AddCommandLine(args);
 
