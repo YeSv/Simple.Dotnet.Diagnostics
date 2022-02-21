@@ -37,7 +37,7 @@ internal sealed class ServerSentEventsCounters
         var countersResult = Counters.Handle(ref query, token);
         if (!countersResult.IsOk)
         {
-            logger.LogError(countersResult.Error.Exception,
+            logger.LogWarning(countersResult.Error.Exception,
                 "Failed to create counters event pipe for a process: {ProcessId}/{ProcessName}. Message: {ErrorMessage}",
                 query.ProcessId, query.ProcessName, countersResult.Error);
 
