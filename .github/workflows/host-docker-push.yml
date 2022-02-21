@@ -31,4 +31,4 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:{{ env.GIT_TAG }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/simple-dotnet-diagnostics:${{ env.GIT_TAG }}
