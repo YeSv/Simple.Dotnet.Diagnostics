@@ -1,7 +1,10 @@
-﻿using Simple.Dotnet.Diagnostics.Actions.Registry;
+﻿using Simple.Dotnet.Diagnostics.Actions;
+using Simple.Dotnet.Diagnostics.Actions.Registry;
 using Simple.Dotnet.Diagnostics.Host.AspNetCore;
 using Simple.Dotnet.Diagnostics.Interceptors;
 using Simple.Dotnet.Diagnostics.Interceptors.AspNetCore;
+using Simple.Dotnet.Utilities.Results;
+using System.Linq;
 
 namespace Simple.Dotnet.Diagnostics.Host.Handlers;
 
@@ -9,12 +12,18 @@ public readonly record struct GetAllActionsQuery();
 
 public readonly record struct CancelActionCommand(string ActionName);
 
+public readonly record struct ActionInfo(string Name, ActionHealthResult Health);
+
 public sealed class HttpActions
 {
     public static async Task<IResult> GetAll(GetAllActionsQuery query, ILogger logger, ActionsRegistry registry, CancellationToken token)
     {
         var result = await registry.GetActions();
-        if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(result, default));
+        if (result.IsOk) return JsonResult.Create(ResponseMapper.ToResponse(UniResult.Ok<ActionInfo[], Exception>(result.Ok switch
+        {
+            null or { Length: 0} => Array.Empty<ActionInfo>(),
+            var infos => infos.Select(h => new ActionInfo(h.Name, h.Health)).ToArray()
+        }), default));
 
         logger.LogWarning(result.Error, "Failed to get actions from registry");
 
